@@ -9,7 +9,7 @@ Jedan fizički predmet opreme, identificiran šifrom.
 _Avoid_: artikal, stavka, item
 
 **Šifra**:
-Identifikator jednog komada. U sebi nosi veličinu i broj tog komada.
+Identifikator jednog komada. Nosi veličinu i broj tog komada. X zamjenjuje znamenku koja se s komada ne može pročitati.
 _Avoid_: kod, ID
 
 **Broj komada**:
@@ -57,7 +57,7 @@ Zbroj unešen na inventuri. Svaki Unesi dodaje na postojeći broj. Vrijedi za po
 _Avoid_: veličina, šifra
 
 **Redak inventure**:
-Jedan unos odijela, peraje, kompenzatora, regulatora, čizmice ili rukavica. Svaki Unesi je novi redak.
+Jedan komad na inventuri, identificiran šifrom. Odijelo, peraje, kompenzator, regulator, čizmice ili rukavice. Svaki Unesi je novi redak.
 _Avoid_: količina
 
 **Izlet**:
