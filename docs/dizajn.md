@@ -1,5 +1,7 @@
 # Dizajn
 
+Primijenjeni izgled: [dizajn-agent.md](./dizajn-agent.md). Ovaj file je Lovable uzor.
+
 Odobren prozor: [lista-opreme.png](./lista-opreme.png).
 
 Lovable. Plavi pomak nije u ovome.

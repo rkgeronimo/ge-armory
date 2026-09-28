@@ -293,7 +293,7 @@ private fun HeldPiecesCard(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
         shape = RoundedCornerShape(16.dp),
     ) {

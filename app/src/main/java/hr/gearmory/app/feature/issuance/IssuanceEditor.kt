@@ -584,7 +584,7 @@ private fun IssuanceSummary(
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
             ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
             border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
             shape = RoundedCornerShape(12.dp),
         ) {
