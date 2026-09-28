@@ -206,6 +206,7 @@ private fun EntryList(
     ) {
         Column(modifier = Modifier.padding(vertical = 4.dp)) {
             EntryRow(
+                type = "Vrsta opreme",
                 code = "Šifra",
                 size = "Veličina",
                 condition = "Stanje",
@@ -226,6 +227,7 @@ private fun EntryList(
             entries.forEach { entry ->
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
                 EntryRow(
+                    type = entry.type,
                     code = entry.code,
                     size = pieceSize(entry.type, entry.code).ifBlank { "—" },
                     condition = entry.condition,
@@ -337,6 +339,7 @@ private fun ColumnScope.EntryForm(
 
 @Composable
 private fun EntryRow(
+    type: String,
     code: String,
     size: String,
     condition: String,
@@ -350,6 +353,17 @@ private fun EntryRow(
             .padding(start = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Text(
+            text = type,
+            modifier = Modifier.weight(1.2f),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+            color = if (header) {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            },
+        )
         Text(
             text = code,
             modifier = Modifier.weight(1.1f),
