@@ -10,6 +10,12 @@ internal data class InventoryEntry(
     val condition: String,
 )
 
+internal val regulatorTypes = listOf(
+    "Apeks" to "RA",
+    "Mares" to "RM",
+    "Scubapro" to "RS",
+)
+
 internal fun inventorySizes(type: String): List<String> = when (type) {
     "Peraje" -> listOf("S", "R", "XL")
     "Kompenzator" -> listOf("XS", "S", "M", "L", "XL", "XXL")

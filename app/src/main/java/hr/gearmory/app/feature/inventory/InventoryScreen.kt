@@ -59,12 +59,16 @@ internal fun InventoryScreen() {
     val viewModel: InventoryViewModel = viewModel()
     var type by rememberSaveable { mutableStateOf(equipmentTypes.first()) }
     var size by rememberSaveable { mutableStateOf("") }
+    var regulator by rememberSaveable { mutableStateOf("") }
     var typed by rememberSaveable { mutableStateOf("") }
     var condition by rememberSaveable { mutableStateOf("Dobro") }
     val sizes = inventorySizes(type)
-    val code = size + typed
+    val brands = if (type == "Regulator") regulatorTypes else emptyList()
+    val prefix = if (type == "Regulator") regulator else size
+    val code = prefix + typed
     val duplicate = code.isNotEmpty() && viewModel.entries.any { it.type == type && it.code == code }
-    val canEnter = typed.isNotBlank() && (sizes.isEmpty() || size.isNotBlank()) && !duplicate
+    val needsChoice = sizes.isNotEmpty() || brands.isNotEmpty()
+    val canEnter = typed.isNotBlank() && (!needsChoice || prefix.isNotBlank()) && !duplicate
     val visible = viewModel.entries.take(5)
     val isPortrait =
         LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
@@ -82,6 +86,7 @@ internal fun InventoryScreen() {
                 onType = { option ->
                     type = option
                     if (size !in inventorySizes(option)) size = ""
+                    if (option != "Regulator") regulator = ""
                 },
             )
             Spacer(Modifier.height(16.dp))
@@ -89,6 +94,9 @@ internal fun InventoryScreen() {
                 sizes = sizes,
                 size = size,
                 onSize = { size = it },
+                brands = brands,
+                regulator = regulator,
+                onRegulator = { regulator = it },
                 condition = condition,
                 onCondition = { condition = it },
                 code = code,
@@ -104,6 +112,7 @@ internal fun InventoryScreen() {
                     viewModel.add(type, code, condition)
                     typed = ""
                     size = ""
+                    regulator = ""
                     condition = "Dobro"
                 },
             )
@@ -128,6 +137,7 @@ internal fun InventoryScreen() {
             onType = { option ->
                 type = option
                 if (size !in inventorySizes(option)) size = ""
+                if (option != "Regulator") regulator = ""
             },
         )
         Spacer(Modifier.height(12.dp))
@@ -141,6 +151,9 @@ internal fun InventoryScreen() {
                     sizes = sizes,
                     size = size,
                     onSize = { size = it },
+                    brands = brands,
+                    regulator = regulator,
+                    onRegulator = { regulator = it },
                     condition = condition,
                     onCondition = { condition = it },
                     code = code,
@@ -156,6 +169,7 @@ internal fun InventoryScreen() {
                         viewModel.add(type, code, condition)
                         typed = ""
                         size = ""
+                        regulator = ""
                         condition = "Dobro"
                     },
                 )
@@ -244,6 +258,9 @@ private fun ColumnScope.EntryForm(
     sizes: List<String>,
     size: String,
     onSize: (String) -> Unit,
+    brands: List<Pair<String, String>>,
+    regulator: String,
+    onRegulator: (String) -> Unit,
     condition: String,
     onCondition: (String) -> Unit,
     code: String,
@@ -270,6 +287,29 @@ private fun ColumnScope.EntryForm(
                 onClick = { onCondition(option) },
                 modifier = Modifier.weight(1f),
             )
+        }
+    }
+    if (brands.isNotEmpty()) {
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = "Tip regulatora",
+            modifier = Modifier.fillMaxWidth(),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            brands.forEach { (label, prefix) ->
+                SelectChip(
+                    label = label,
+                    selected = prefix == regulator,
+                    onClick = { onRegulator(prefix) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
     if (sizes.isNotEmpty()) {

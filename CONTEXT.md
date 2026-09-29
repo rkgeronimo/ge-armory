@@ -24,6 +24,10 @@ _Avoid_: kategorija, naziv
 Veličina komada, ovisi o vrsti. Odijelo 1–9, čizma 3–12, peraja S, R ili XL, kompenzator XS, S, M, L, XL ili XXL, rukavice S, M, L ili XL. Regulator je nema.
 _Avoid_: broj, količina
 
+**Tip regulatora**:
+Marka regulatora. Apeks, Mares ili Scubapro. U šifri prefiks RA, RM ili RS.
+_Avoid_: veličina, vrsta opreme
+
 **Status**:
 Gdje je komad. Na stanju ili Izdano.
 _Avoid_: stanje
