@@ -287,20 +287,29 @@ private fun PieceTable(
     onOpen: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier) {
-        TableRow(
-            code = "Šifra",
-            type = "Vrsta opreme",
-            size = "Veličina",
-            status = "Status",
-            holder = "Zadužio/la",
-            issuedOn = "Datum izdavanja",
-            header = true,
-            checked = false,
-            onToggle = {},
-            onOpen = {},
-        )
-        pieces.forEach { piece ->
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Column {
+            Box(Modifier.background(MaterialTheme.colorScheme.surfaceVariant)) {
+            TableRow(
+                code = "Šifra",
+                type = "Vrsta opreme",
+                size = "Veličina",
+                status = "Status",
+                holder = "Zadužio/la",
+                issuedOn = "Datum izdavanja",
+                header = true,
+                checked = false,
+                onToggle = {},
+                onOpen = {},
+            )
+            }
+            pieces.forEach { piece ->
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             TableRow(
                 code = piece.code,
                 type = piece.type,
@@ -314,6 +323,7 @@ private fun PieceTable(
                 onToggle = { onToggle(piece.id) },
                 onOpen = { onOpen(piece.id) },
             )
+        }
         }
     }
 }
@@ -354,9 +364,6 @@ private fun TableRow(
         }
         Text(holder, modifier = Modifier.weight(1.3f), fontWeight = if (header) FontWeight.SemiBold else FontWeight.Normal)
         Text(issuedOn, modifier = Modifier.weight(1.2f), fontWeight = if (header) FontWeight.SemiBold else FontWeight.Normal)
-    }
-    if (!header) {
-        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
     }
 }
 

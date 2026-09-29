@@ -6,6 +6,7 @@ import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.FactCheck
 import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.material.icons.rounded.ViewList
 import androidx.compose.ui.graphics.vector.ImageVector
 
 internal enum class Destination(
@@ -31,5 +32,9 @@ internal enum class Destination(
     Inventory(
         title = "Inventura",
         icon = Icons.Rounded.FactCheck,
+    ),
+    InventoryPopis(
+        title = "Popis inventure",
+        icon = Icons.Rounded.ViewList,
     ),
 }

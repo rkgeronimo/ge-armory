@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import hr.gearmory.app.feature.equipment.EquipmentScreen
 import hr.gearmory.app.feature.home.HomeScreen
+import hr.gearmory.app.feature.inventory.InventoryPopisScreen
 import hr.gearmory.app.feature.inventory.InventoryScreen
 import hr.gearmory.app.feature.issuance.IssuanceScreen
 import hr.gearmory.app.feature.returns.ReturnsScreen
@@ -178,6 +179,7 @@ private fun ShellContent(
             Destination.Returns -> ReturnsScreen()
             Destination.Equipment -> EquipmentScreen()
             Destination.Inventory -> InventoryScreen()
+            Destination.InventoryPopis -> InventoryPopisScreen()
         }
     }
 }

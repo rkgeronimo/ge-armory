@@ -56,9 +56,35 @@ _Avoid_: check-in, odjava
 Unos opreme koja se broji. Neke vrste zbrajaju količinu, neke dodaju redak. Popis stoji na tabletu.
 _Avoid_: lista opreme, stocktake
 
+**Popis**:
+Svi retci na tabletu. Ostaje dok se redak ne makne.
+_Avoid_: stanje
+
 **Količina**:
-Zbroj unešen na inventuri. Svaki Unesi dodaje na postojeći broj. Vrijedi za pojaseve, olo, maske i dišalice.
+Broj komada te vrste na inventuri. Vrijedi za olovo 1kg, olovo 2kg, pojas, masku, disalicu, kadicu i razno.
 _Avoid_: veličina, šifra
+
+**Razno**:
+Količina s imenom koje sam upišeš.
+_Avoid_: slobodno, free unos
+
+**Napomena**:
+Tekst uz razno. Ostale vrste je nemaju.
+_Avoid_: komentar, bilješka
+
+**Pojas**:
+Pojas za utege.
+_Avoid_: pojasevi
+
+**Maska**:
+Maska za ronjenje.
+
+**Disalica**:
+Cijev za disanje na površini.
+_Avoid_: dišalica, snorkel
+
+**Kadica**:
+Posuda u kojoj se oprema ispire.
 
 **Redak inventure**:
 Jedan komad na inventuri, identificiran šifrom. Odijelo, peraje, kompenzator, regulator, čizmice ili rukavice. Svaki Unesi je novi redak.
@@ -76,6 +102,10 @@ _Avoid_: korisnik
 Tražena oprema za izlet. Na početnoj se vidi samo broj zahtjeva.
 _Avoid_: narudžba, rezervacija
 
-**Olo**:
-Utezi. Svaki je 1 kg ili 2 kg.
-_Avoid_: olovo, uteg
+**Olovo 1kg**:
+Uteg od jednog kilograma.
+_Avoid_: olo, uteg
+
+**Olovo 2kg**:
+Uteg od dva kilograma.
+_Avoid_: olo, uteg

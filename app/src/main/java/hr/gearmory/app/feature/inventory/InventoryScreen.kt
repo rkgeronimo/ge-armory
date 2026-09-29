@@ -1,6 +1,7 @@
 package hr.gearmory.app.feature.inventory
 
 import android.content.res.Configuration
+import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,16 +37,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -55,23 +61,67 @@ import hr.gearmory.app.feature.equipment.pieceSize
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun InventoryScreen() {
-    val viewModel: InventoryViewModel = viewModel()
+internal fun InventoryScreen(viewModel: InventoryViewModel = viewModel()) {
     var type by rememberSaveable { mutableStateOf(equipmentTypes.first()) }
     var size by rememberSaveable { mutableStateOf("") }
     var regulator by rememberSaveable { mutableStateOf("") }
     var typed by rememberSaveable { mutableStateOf("") }
     var condition by rememberSaveable { mutableStateOf("Dobro") }
+    var drafts by remember { mutableStateOf(mapOf<String, String>()) }
+    var raznoName by rememberSaveable { mutableStateOf("") }
+    var raznoCount by rememberSaveable { mutableStateOf("") }
+    var raznoNote by rememberSaveable { mutableStateOf("") }
     val sizes = inventorySizes(type)
     val brands = if (type == "Regulator") regulatorTypes else emptyList()
     val prefix = if (type == "Regulator") regulator else size
     val code = prefix + typed
     val duplicate = code.isNotEmpty() && viewModel.entries.any { it.type == type && it.code == code }
     val needsChoice = sizes.isNotEmpty() || brands.isNotEmpty()
-    val canEnter = typed.isNotBlank() && (!needsChoice || prefix.isNotBlank()) && !duplicate
+    val canEnter = viewModel.notice != CsvReadError &&
+        typed.isNotBlank() &&
+        (!needsChoice || prefix.isNotBlank()) &&
+        !duplicate
     val visible = viewModel.entries.take(5)
     val isPortrait =
         LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
+
+    LaunchedEffect(Unit) {
+        viewModel.reload()
+        drafts = quantityTypes.associateWith { viewModel.quantityOf(it) }
+    }
+
+    fun selectType(option: String) {
+        type = option
+        if (size !in inventorySizes(option)) size = ""
+        if (option != "Regulator") regulator = ""
+        if (option == ChipOstalo) {
+            drafts = quantityTypes.associateWith { viewModel.quantityOf(it) }
+        }
+    }
+
+    fun enterPiece() {
+        viewModel.addPiece(type, code, condition)
+        if (viewModel.notice != null) return
+        typed = ""
+        size = ""
+        regulator = ""
+        condition = "Dobro"
+    }
+
+    fun enterQuantity(kind: String, raw: String, note: String = "") {
+        viewModel.setQuantity(kind, raw, note)
+        val name = if (kind in quantityTypes) kind else raznoNameOk(kind)
+        if (name == null) return
+        val saved = viewModel.quantityOf(name)
+        if (saved.isEmpty()) return
+        if (name in quantityTypes) {
+            drafts = drafts + (name to saved)
+        } else {
+            raznoName = name
+            raznoCount = saved
+            raznoNote = viewModel.entries.firstOrNull { it.type == name }?.note.orEmpty()
+        }
+    }
 
     if (isPortrait) {
         Column(
@@ -81,16 +131,11 @@ internal fun InventoryScreen() {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            TypeChips(
-                type = type,
-                onType = { option ->
-                    type = option
-                    if (size !in inventorySizes(option)) size = ""
-                    if (option != "Regulator") regulator = ""
-                },
-            )
+            TypeChips(type = type, onType = ::selectType)
             Spacer(Modifier.height(16.dp))
-            EntryForm(
+            InventoryNotice(viewModel.notice)
+            InventoryEditor(
+                type = type,
                 sizes = sizes,
                 size = size,
                 onSize = { size = it },
@@ -108,13 +153,21 @@ internal fun InventoryScreen() {
                         else -> (typed + key).filter { it.isDigit() || it == 'X' }.take(12)
                     }
                 },
-                onEnter = {
-                    viewModel.add(type, code, condition)
-                    typed = ""
-                    size = ""
-                    regulator = ""
-                    condition = "Dobro"
+                onEnter = ::enterPiece,
+                drafts = drafts,
+                onDraft = { kind, value ->
+                    drafts = drafts + (kind to value.filter { it.isDigit() }.take(9))
                 },
+                onQuantity = { viewModel.setOstalo(drafts)
+                    drafts = quantityTypes.associateWith { viewModel.quantityOf(it) }
+                },
+                raznoName = raznoName,
+                onRaznoName = { raznoName = it },
+                raznoCount = raznoCount,
+                onRaznoCount = { raznoCount = it.filter { char -> char.isDigit() }.take(9) },
+                raznoNote = raznoNote,
+                onRaznoNote = { raznoNote = it },
+                onRazno = { enterQuantity(raznoName, raznoCount, raznoNote) },
             )
             if (visible.isNotEmpty()) {
                 Spacer(Modifier.height(16.dp))
@@ -132,22 +185,17 @@ internal fun InventoryScreen() {
             .fillMaxSize()
             .padding(16.dp),
     ) {
-        TypeChips(
-            type = type,
-            onType = { option ->
-                type = option
-                if (size !in inventorySizes(option)) size = ""
-                if (option != "Regulator") regulator = ""
-            },
-        )
+        TypeChips(type = type, onType = ::selectType)
         Spacer(Modifier.height(12.dp))
+        InventoryNotice(viewModel.notice)
         Row(modifier = Modifier.weight(1f)) {
             Column(
                 modifier = Modifier
                     .weight(1.2f)
                     .verticalScroll(rememberScrollState()),
             ) {
-                EntryForm(
+                InventoryEditor(
+                    type = type,
                     sizes = sizes,
                     size = size,
                     onSize = { size = it },
@@ -165,13 +213,21 @@ internal fun InventoryScreen() {
                             else -> (typed + key).filter { it.isDigit() || it == 'X' }.take(12)
                         }
                     },
-                    onEnter = {
-                        viewModel.add(type, code, condition)
-                        typed = ""
-                        size = ""
-                        regulator = ""
-                        condition = "Dobro"
+                    onEnter = ::enterPiece,
+                    drafts = drafts,
+                    onDraft = { kind, value ->
+                        drafts = drafts + (kind to value.filter { it.isDigit() }.take(9))
                     },
+                    onQuantity = { viewModel.setOstalo(drafts)
+                    drafts = quantityTypes.associateWith { viewModel.quantityOf(it) }
+                },
+                    raznoName = raznoName,
+                    onRaznoName = { raznoName = it },
+                    raznoCount = raznoCount,
+                    onRaznoCount = { raznoCount = it.filter { char -> char.isDigit() }.take(9) },
+                    raznoNote = raznoNote,
+                    onRaznoNote = { raznoNote = it },
+                    onRazno = { enterQuantity(raznoName, raznoCount, raznoNote) },
                 )
             }
             Spacer(Modifier.size(16.dp))
@@ -197,7 +253,7 @@ private fun TypeChips(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        equipmentTypes.forEach { option ->
+        inventoryChips.forEach { option ->
             SelectChip(
                 label = option,
                 selected = option == type,
@@ -216,17 +272,22 @@ private fun EntryList(
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
-        Column(modifier = Modifier.padding(vertical = 4.dp)) {
-            EntryRow(
-                type = "Vrsta opreme",
-                code = "Šifra",
-                size = "Veličina",
-                condition = "Stanje",
-                header = true,
-                onRemove = {},
-            )
+        Column {
+            Box(Modifier.background(MaterialTheme.colorScheme.surfaceVariant)) {
+                EntryRow(
+                    type = "Vrsta",
+                    code = "Šifra",
+                    size = "Veličina",
+                    condition = "Stanje",
+                    quantity = "Količina",
+                    note = "Napomena",
+                    header = true,
+                    onRemove = {},
+                )
+            }
             if (entries.isEmpty()) {
                 Text(
                     text = "Nema unosa",
@@ -239,16 +300,195 @@ private fun EntryList(
                 )
             }
             entries.forEach { entry ->
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 EntryRow(
                     type = entry.type,
-                    code = entry.code,
-                    size = pieceSize(entry.type, entry.code).ifBlank { "—" },
-                    condition = entry.condition,
+                    code = if (entry.isQuantity()) "—" else entry.code,
+                    size = if (entry.isQuantity()) {
+                        "—"
+                    } else {
+                        pieceSize(entry.type, entry.code).ifBlank { "—" }
+                    },
+                    condition = if (entry.isQuantity()) "—" else entry.condition,
+                    quantity = if (entry.isQuantity()) entry.quantity else "—",
+                    note = if (entry.note.isEmpty()) "—" else entry.note,
                     header = false,
                     onRemove = { onRemove(entry.id) },
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun InventoryNotice(notice: String?) {
+    if (notice == null) return
+    Text(
+        text = notice,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp),
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodyLarge,
+    )
+}
+
+@Composable
+private fun ColumnScope.InventoryEditor(
+    type: String,
+    sizes: List<String>,
+    size: String,
+    onSize: (String) -> Unit,
+    brands: List<Pair<String, String>>,
+    regulator: String,
+    onRegulator: (String) -> Unit,
+    condition: String,
+    onCondition: (String) -> Unit,
+    code: String,
+    duplicate: Boolean,
+    canEnter: Boolean,
+    onKey: (String) -> Unit,
+    onEnter: () -> Unit,
+    drafts: Map<String, String>,
+    onDraft: (String, String) -> Unit,
+    onQuantity: () -> Unit,
+    raznoName: String,
+    onRaznoName: (String) -> Unit,
+    raznoCount: String,
+    onRaznoCount: (String) -> Unit,
+    raznoNote: String,
+    onRaznoNote: (String) -> Unit,
+    onRazno: () -> Unit,
+) {
+    when (type) {
+        ChipOstalo -> QuantityFields(
+            rows = quantityTypes.associateWith { drafts[it].orEmpty() },
+            onDraft = onDraft,
+            onEnter = onQuantity,
+        )
+        ChipRazno -> RaznoFields(
+            name = raznoName,
+            count = raznoCount,
+            note = raznoNote,
+            onName = onRaznoName,
+            onCount = onRaznoCount,
+            onNote = onRaznoNote,
+            onEnter = onRazno,
+        )
+        else -> EntryForm(
+            sizes = sizes,
+            size = size,
+            onSize = onSize,
+            brands = brands,
+            regulator = regulator,
+            onRegulator = onRegulator,
+            condition = condition,
+            onCondition = onCondition,
+            code = code,
+            duplicate = duplicate,
+            canEnter = canEnter,
+            onKey = onKey,
+            onEnter = onEnter,
+        )
+    }
+}
+
+@Composable
+private fun QuantityFields(
+    rows: Map<String, String>,
+    onDraft: (String, String) -> Unit,
+    onEnter: () -> Unit,
+) {
+    val ready = quantityTypes.any { normalizeQuantity(rows[it].orEmpty()) != null }
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        quantityTypes.forEach { kind ->
+            val value = rows[kind].orEmpty()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = kind,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                )
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = { onDraft(kind, it) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(56.dp),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+            }
+        }
+        Button(
+            onClick = onEnter,
+            enabled = ready,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(12.dp),
+        ) {
+            Text("Spremi", fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+@Composable
+private fun RaznoFields(
+    name: String,
+    count: String,
+    note: String,
+    onName: (String) -> Unit,
+    onCount: (String) -> Unit,
+    onNote: (String) -> Unit,
+    onEnter: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        OutlinedTextField(
+            value = name,
+            onValueChange = onName,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            placeholder = { Text("Vrsta") },
+            singleLine = true,
+        )
+        OutlinedTextField(
+            value = count,
+            onValueChange = onCount,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            placeholder = { Text("Količina") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        )
+        OutlinedTextField(
+            value = note,
+            onValueChange = onNote,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            placeholder = { Text("Napomena") },
+            singleLine = true,
+        )
+        Button(
+            onClick = onEnter,
+            enabled = raznoNameOk(name) != null && normalizeQuantity(count) != null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(12.dp),
+        ) {
+            Text("Unesi", fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -383,6 +623,8 @@ private fun EntryRow(
     code: String,
     size: String,
     condition: String,
+    quantity: String,
+    note: String,
     header: Boolean,
     onRemove: () -> Unit,
 ) {
@@ -393,49 +635,74 @@ private fun EntryRow(
             .padding(start = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        val style = if (header) {
+            MaterialTheme.typography.bodyMedium
+        } else {
+            MaterialTheme.typography.bodyLarge
+        }
+        val color = if (header) {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        }
         Text(
             text = type,
-            modifier = Modifier.weight(1.2f),
-            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1.25f),
+            style = style,
             fontWeight = FontWeight.Medium,
-            color = if (header) {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            },
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
+            color = color,
         )
         Text(
             text = code,
-            modifier = Modifier.weight(1.1f),
-            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(0.8f),
+            style = style,
             fontWeight = FontWeight.Medium,
-            color = if (header) {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            },
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
+            color = color,
         )
         Text(
             text = size,
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(0.95f),
+            style = style,
             textAlign = TextAlign.Center,
-            color = if (header) {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            },
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
+            color = color,
         )
         Text(
             text = condition,
-            modifier = Modifier.weight(1.2f),
-            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.weight(1.15f),
+            style = style,
             textAlign = TextAlign.Center,
-            color = if (header) {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            },
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
+            color = color,
+        )
+        Text(
+            text = quantity,
+            modifier = Modifier.weight(1.05f),
+            style = style,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
+            color = color,
+        )
+        Text(
+            text = note,
+            modifier = Modifier.weight(1.2f),
+            style = style,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
+            color = color,
         )
         if (header) {
             Spacer(Modifier.size(48.dp))
