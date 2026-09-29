@@ -1,6 +1,5 @@
 package hr.gearmory.app.feature.inventory
 
-import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -44,14 +43,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import hr.gearmory.app.feature.equipment.pieceConditions
-import hr.gearmory.app.feature.equipment.pieceSize
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -60,8 +57,6 @@ internal fun InventoryPopisScreen(viewModel: InventoryViewModel = viewModel()) {
     var confirmClear by remember { mutableStateOf(false) }
     val editing = viewModel.entries.firstOrNull { it.id == editingId }
     val shown = popisSorted(viewModel.entries.toList())
-    val isPortrait =
-        LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
 
     LaunchedEffect(Unit) {
         viewModel.reload()
@@ -71,11 +66,11 @@ internal fun InventoryPopisScreen(viewModel: InventoryViewModel = viewModel()) {
         PopisEdit(
             entry = editing,
             onCancel = { editingId = null },
-            onSave = { code, condition, type, quantity, note ->
+            onSave = { code, condition, type, quantity, note, thickness, gearSize ->
                 val saved = if (editing.isQuantity()) {
                     viewModel.updateQuantity(editing.id, type, quantity, note)
                 } else {
-                    viewModel.updatePiece(editing.id, code, condition)
+                    viewModel.updatePiece(editing.id, code, condition, thickness, gearSize)
                 }
                 if (saved) editingId = null
             },
@@ -104,7 +99,11 @@ internal fun InventoryPopisScreen(viewModel: InventoryViewModel = viewModel()) {
         if (viewModel.notice != null) {
             Text(
                 text = viewModel.notice.orEmpty(),
-                color = MaterialTheme.colorScheme.error,
+                color = if (viewModel.notice == CsvReadError || viewModel.notice == CsvWriteError) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
                 style = MaterialTheme.typography.bodyLarge,
             )
         }
@@ -118,14 +117,6 @@ internal fun InventoryPopisScreen(viewModel: InventoryViewModel = viewModel()) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyLarge,
             )
-        } else if (isPortrait) {
-            shown.forEach { entry ->
-                PopisCard(
-                    entry = entry,
-                    onOpen = { editingId = entry.id },
-                    onRemove = { viewModel.remove(entry.id) },
-                )
-            }
         } else {
             PopisTable(
                 entries = shown,
@@ -158,56 +149,6 @@ internal fun InventoryPopisScreen(viewModel: InventoryViewModel = viewModel()) {
 }
 
 @Composable
-private fun PopisCard(
-    entry: InventoryEntry,
-    onOpen: () -> Unit,
-    onRemove: () -> Unit,
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 96.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .clickable(onClick = onOpen)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                if (entry.isQuantity()) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(entry.type, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-                        Text(entry.quantity, fontWeight = FontWeight.Medium)
-                    }
-                    if (entry.note.isNotEmpty()) {
-                        Text(entry.note, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                } else {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(entry.code, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-                        Text(entry.type, fontWeight = FontWeight.Medium)
-                    }
-                    Text(
-                        listOf(
-                            pieceSize(entry.type, entry.code).ifBlank { "—" },
-                            entry.condition,
-                        ).joinToString("  "),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            IconButton(onClick = onRemove, modifier = Modifier.size(48.dp)) {
-                Icon(Icons.Rounded.Close, contentDescription = "Makni redak")
-            }
-        }
-    }
-}
-
-@Composable
 private fun PopisTable(
     entries: List<InventoryEntry>,
     onOpen: (String) -> Unit,
@@ -225,6 +166,7 @@ private fun PopisTable(
                 type = "Vrsta",
                 code = "Šifra",
                 size = "Veličina",
+                thickness = "Debljina",
                 condition = "Stanje",
                 quantity = "Količina",
                 note = "Napomena",
@@ -238,7 +180,8 @@ private fun PopisTable(
             PopisRow(
                 type = entry.type,
                 code = entry.code,
-                size = if (entry.isQuantity()) "" else pieceSize(entry.type, entry.code),
+                size = if (entry.isQuantity()) "" else shownSize(entry.type, entry.code, entry.size),
+                thickness = if (entry.type == "Odijelo") entry.thickness else "—",
                 condition = entry.condition,
                 quantity = entry.quantity,
                 note = entry.note,
@@ -256,6 +199,7 @@ private fun PopisRow(
     type: String,
     code: String,
     size: String,
+    thickness: String,
     condition: String,
     quantity: String,
     note: String,
@@ -274,6 +218,7 @@ private fun PopisRow(
         PopisCell(type, Modifier.weight(1.3f), header)
         PopisCell(code, Modifier.weight(1f), header)
         PopisCell(size, Modifier.weight(0.8f), header)
+        PopisCell(thickness, Modifier.weight(0.8f), header)
         PopisCell(condition, Modifier.weight(1.1f), header)
         PopisCell(quantity, Modifier.weight(0.8f), header)
         PopisCell(note, Modifier.weight(1.2f), header)
@@ -306,10 +251,12 @@ private fun PopisCell(text: String, modifier: Modifier, header: Boolean) {
 private fun PopisEdit(
     entry: InventoryEntry,
     onCancel: () -> Unit,
-    onSave: (code: String, condition: String, type: String, quantity: String, note: String) -> Unit,
+    onSave: (code: String, condition: String, type: String, quantity: String, note: String, thickness: String, gearSize: String) -> Unit,
 ) {
     var code by rememberSaveable(entry.id) { mutableStateOf(entry.code) }
     var condition by rememberSaveable(entry.id) { mutableStateOf(entry.condition) }
+    var thickness by rememberSaveable(entry.id) { mutableStateOf(entry.thickness) }
+    var gearSize by rememberSaveable(entry.id) { mutableStateOf(entry.size) }
     var type by rememberSaveable(entry.id) { mutableStateOf(entry.type) }
     var quantity by rememberSaveable(entry.id) { mutableStateOf(entry.quantity) }
     var note by rememberSaveable(entry.id) { mutableStateOf(entry.note) }
@@ -386,6 +333,72 @@ private fun PopisEdit(
                     .height(56.dp),
                 singleLine = true,
             )
+            if (entry.type == "Kompenzator") {
+                Spacer(Modifier.height(20.dp))
+                Text(
+                    text = "Veličina",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(8.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    inventorySizes(entry.type).forEach { option ->
+                        Button(
+                            onClick = { gearSize = option },
+                            modifier = Modifier.height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (option == gearSize) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                },
+                                contentColor = if (option == gearSize) {
+                                    MaterialTheme.colorScheme.onPrimary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                            ),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+                        ) {
+                            Text(option)
+                        }
+                    }
+                }
+            }
+            if (entry.type == "Odijelo") {
+                Spacer(Modifier.height(20.dp))
+                Text(
+                    text = "Debljina",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(8.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    suitThicknesses.forEach { option ->
+                        Button(
+                            onClick = { thickness = option },
+                            modifier = Modifier.height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (option == thickness) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                },
+                                contentColor = if (option == thickness) {
+                                    MaterialTheme.colorScheme.onPrimary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                            ),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+                        ) {
+                            Text(option)
+                        }
+                    }
+                }
+            }
             Spacer(Modifier.height(20.dp))
             Text(
                 text = "Stanje",
@@ -434,7 +447,21 @@ private fun PopisEdit(
                 Text("Odustani")
             }
             Button(
-                onClick = { onSave(code.trim(), condition, type, quantity, note) },
+                onClick = {
+                    onSave(
+                        code.trim(),
+                        condition,
+                        type,
+                        quantity,
+                        note,
+                        thickness,
+                        if (entry.type == "Kompenzator") gearSize else "",
+                    )
+                },
+                enabled = entry.isQuantity() || (
+                    (entry.type != "Odijelo" || thickness in suitThicknesses) &&
+                        (entry.type != "Kompenzator" || gearSize in inventorySizes(entry.type))
+                    ),
                 modifier = Modifier
                     .weight(1f)
                     .height(56.dp),

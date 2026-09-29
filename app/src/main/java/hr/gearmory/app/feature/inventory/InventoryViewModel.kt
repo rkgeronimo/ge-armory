@@ -14,6 +14,8 @@ internal data class InventoryEntry(
     val condition: String,
     val quantity: String,
     val note: String = "",
+    val thickness: String = "",
+    val size: String = "",
 )
 
 internal class InventoryViewModel(app: Application) : AndroidViewModel(app) {
@@ -27,9 +29,15 @@ internal class InventoryViewModel(app: Application) : AndroidViewModel(app) {
         when (val load = store.read()) {
             is InventoryLoad.Ready -> {
                 blocked = false
-                notice = null
                 entries.clear()
                 entries.addAll(load.entries)
+                notice = if (load.dropped > 0 && store.write(load.entries)) {
+                    skippedRowsNotice(load.dropped)
+                } else if (load.dropped > 0) {
+                    CsvWriteError
+                } else {
+                    null
+                }
             }
             InventoryLoad.Corrupt -> {
                 blocked = true
@@ -44,10 +52,10 @@ internal class InventoryViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun addPiece(type: String, code: String, condition: String) {
-        if (blocked || !pieceCodeOk(type, code)) return
+    fun addPiece(type: String, code: String, condition: String, thickness: String, size: String) {
+        if (blocked || !pieceCodeOk(type, code) || !thicknessOk(type, thickness) || !sizeOk(type, size)) return
         if (entries.any { it.type == type && it.code == code }) return
-        val row = InventoryEntry(freshId(), type, code, condition, "")
+        val row = InventoryEntry(freshId(), type, code, condition, "", thickness = thickness, size = size)
         commit(listOf(row) + entries)
     }
 
@@ -97,16 +105,23 @@ internal class InventoryViewModel(app: Application) : AndroidViewModel(app) {
         commit(emptyList())
     }
 
-    fun updatePiece(id: String, code: String, condition: String): Boolean {
+    fun updatePiece(id: String, code: String, condition: String, thickness: String, size: String): Boolean {
         if (blocked) return false
         val index = entries.indexOfFirst { it.id == id }
         if (index < 0) return false
         val current = entries[index]
         if (current.isQuantity() || !pieceCodeOk(current.type, code)) return false
         if (condition !in hr.gearmory.app.feature.equipment.pieceConditions) return false
+        if (!thicknessOk(current.type, thickness) || !sizeOk(current.type, size)) return false
         if (entries.any { it.id != id && it.type == current.type && it.code == code }) return false
         val next = entries.toMutableList()
-        next[index] = current.copy(code = code, condition = condition, quantity = "")
+        next[index] = current.copy(
+            code = code,
+            condition = condition,
+            quantity = "",
+            thickness = thickness,
+            size = size,
+        )
         return commit(next)
     }
 

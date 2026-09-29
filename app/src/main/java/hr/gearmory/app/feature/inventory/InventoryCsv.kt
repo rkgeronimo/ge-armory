@@ -1,5 +1,7 @@
 package hr.gearmory.app.feature.inventory
 
+import hr.gearmory.app.feature.equipment.codeLetter
+import hr.gearmory.app.feature.equipment.typedNumberLimit
 import hr.gearmory.app.feature.equipment.equipmentTypes
 import hr.gearmory.app.feature.equipment.pieceConditions
 import hr.gearmory.app.feature.equipment.pieceSize
@@ -7,9 +9,18 @@ import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
 import java.nio.charset.CodingErrorAction
 
-internal const val CsvHeader = "Vrsta;Sifra;Velicina;Stanje;Kolicina;Napomena"
+internal const val CsvHeader = "Vrsta;Sifra;Velicina;Debljina;Stanje;Kolicina;Napomena"
+private const val LegacyNoteHeader = "Vrsta;Sifra;Velicina;Stanje;Kolicina;Napomena"
 private const val LegacyCsvHeader = "Vrsta;Sifra;Velicina;Stanje;Kolicina"
+internal val suitThicknesses = listOf("3mm", "5mm", "7mm")
 internal const val CsvReadError = "Csv se ne da čitati."
+
+internal fun skippedRowsNotice(count: Int): String = "$count redaka maknuto. Ne daju se čitati."
+
+internal data class InventoryRead(
+    val entries: List<InventoryEntry>,
+    val dropped: Int,
+)
 internal const val CsvWriteError = "Csv nije zapisan."
 internal const val ChipOstalo = "Ostalo"
 internal const val ChipRazno = "Razno"
@@ -30,6 +41,15 @@ internal val regulatorTypes = listOf(
     "Mares" to "RM",
     "Scubapro" to "RS",
 )
+
+internal fun thicknessOk(type: String, thickness: String): Boolean =
+    if (type == "Odijelo") thickness in suitThicknesses else thickness.isEmpty()
+
+internal fun sizeOk(type: String, size: String): Boolean =
+    if (type == "Kompenzator") size in inventorySizes(type) else size.isEmpty()
+
+internal fun shownSize(type: String, code: String, stored: String): String =
+    if (type == "Kompenzator") stored else pieceSize(type, code)
 
 internal fun inventorySizes(type: String): List<String> = when (type) {
     "Peraje" -> listOf("S", "R", "XL")
@@ -60,21 +80,36 @@ internal fun fromFileType(type: String): String = when (type) {
     else -> type
 }
 
+private fun numberOk(text: String, limit: Int): Boolean =
+    text.isNotEmpty() && text.length <= limit && text.all { it.isDigit() || it == 'X' }
+
 internal fun pieceCodeOk(type: String, code: String): Boolean {
     if (code.isEmpty() || type !in equipmentTypes) return false
     val sizes = inventorySizes(type).sortedByDescending { it.length }
+    val limit = typedNumberLimit(type)
     return when (type) {
-        "Peraje", "Kompenzator", "Rukavice" -> {
+        "Peraje" -> {
             val size = sizes.firstOrNull { code.startsWith(it) } ?: return false
             val rest = code.removePrefix(size)
-            rest.isNotEmpty() && rest.length <= 12 && rest.all { it.isDigit() || it == 'X' }
+            rest.length in 1..2 && rest.all { it.isDigit() || it == 'X' }
+        }
+        "Rukavice" -> {
+            val letter = codeLetter(type)
+            if (!code.startsWith(letter)) return false
+            val body = code.removePrefix(letter)
+            val size = sizes.firstOrNull { body.startsWith(it) } ?: return false
+            numberOk(body.removePrefix(size), limit)
+        }
+        "Čizmice", "Kompenzator" -> {
+            val letter = codeLetter(type)
+            if (!code.startsWith(letter)) return false
+            numberOk(code.removePrefix(letter), limit)
         }
         "Regulator" -> {
             val prefix = regulatorTypes.firstOrNull { code.startsWith(it.second) }?.second ?: return false
-            val rest = code.removePrefix(prefix)
-            rest.isNotEmpty() && rest.length <= 12 && rest.all { it.isDigit() || it == 'X' }
+            numberOk(code.removePrefix(prefix), limit)
         }
-        else -> code.length <= 12 && code.all { it.isDigit() || it == 'X' }
+        else -> numberOk(code, limit)
     }
 }
 
@@ -125,12 +160,15 @@ internal fun encodeInventory(entries: List<InventoryEntry>): String = buildStrin
     append(CsvHeader)
     append("\r\n")
     entries.forEach { entry ->
-        val size = if (entry.isQuantity()) "" else pieceSize(entry.type, entry.code)
+        val size = if (entry.isQuantity()) "" else shownSize(entry.type, entry.code, entry.size)
+        val thickness = if (entry.type == "Odijelo") entry.thickness else ""
         append(toFileType(entry.type))
         append(';')
         append(entry.code)
         append(';')
         append(size)
+        append(';')
+        append(thickness)
         append(';')
         append(entry.condition)
         append(';')
@@ -168,41 +206,53 @@ internal fun decodeInventory(bytes: ByteArray): String? {
     }
 }
 
-internal fun parseInventory(text: String): List<InventoryEntry>? {
+internal fun parseInventory(text: String): InventoryRead? {
     val lines = text.split('\n').map { it.removeSuffix("\r") }
     var end = lines.size
     while (end > 0 && lines[end - 1].isBlank()) end--
     if (end == 0) return null
     val columns = when (lines[0]) {
-        CsvHeader -> 6
+        CsvHeader -> 7
+        LegacyNoteHeader -> 6
         LegacyCsvHeader -> 5
         else -> return null
     }
+    val hasThickness = lines[0] == CsvHeader
     val parsed = mutableListOf<InventoryEntry>()
+    var dropped = 0
     for (index in 1 until end) {
         val line = lines[index]
-        if (line.isBlank()) return null
-        val fields = parseCsvRow(line) ?: return null
-        if (fields.size != columns) return null
-        val entry = rowToEntry(fields.map { it.trim() }, index) ?: return null
+        val fields = if (line.isBlank()) null else parseCsvRow(line)
+        val entry = if (fields == null || fields.size != columns) {
+            null
+        } else {
+            rowToEntry(fields.map { it.trim() }, index, hasThickness)
+        }
+        if (entry == null || conflicts(parsed, entry)) {
+            dropped++
+            continue
+        }
         parsed += entry
     }
-    if (hasDuplicate(parsed)) return null
-    return parsed
+    return InventoryRead(parsed, dropped)
 }
 
-private fun rowToEntry(fields: List<String>, index: Int): InventoryEntry? {
+private fun rowToEntry(fields: List<String>, index: Int, hasThickness: Boolean): InventoryEntry? {
     val type = fromFileType(fields[0])
     val code = fields[1]
-    val condition = fields[3]
-    val quantity = fields[4]
-    val note = fields.getOrElse(5) { "" }
+    val size = fields[2]
+    val rawThickness = if (hasThickness) fields[3] else ""
+    val thickness = if (rawThickness == "-") "" else rawThickness
+    val shift = if (hasThickness) 1 else 0
+    val condition = fields[3 + shift]
+    val quantity = fields[4 + shift]
+    val note = fields.getOrElse(5 + shift) { "" }
     return when {
-        type in equipmentTypes -> pieceEntry(type, code, condition, quantity, note, index)
-        type in quantityTypes -> quantityEntry(type, code, fields[2], condition, quantity, note, false, index)
+        type in equipmentTypes -> pieceEntry(type, code, size, condition, quantity, note, thickness, index)
+        type in quantityTypes -> quantityEntry(type, code, size, thickness, condition, quantity, note, false, index)
         else -> {
             val name = raznoNameOk(type) ?: return null
-            quantityEntry(name, code, fields[2], condition, quantity, note, true, index)
+            quantityEntry(name, code, size, thickness, condition, quantity, note, true, index)
         }
     }
 }
@@ -210,40 +260,52 @@ private fun rowToEntry(fields: List<String>, index: Int): InventoryEntry? {
 private fun pieceEntry(
     type: String,
     code: String,
+    size: String,
     condition: String,
     quantity: String,
     note: String,
+    thickness: String,
     index: Int,
 ): InventoryEntry? {
     if (!pieceCodeOk(type, code)) return null
     if (condition !in pieceConditions) return null
     if (quantity.isNotEmpty() || note.isNotEmpty()) return null
-    return InventoryEntry(index.toString(), type, code, condition, "")
+    if (type == "Odijelo") {
+        if (thickness.isNotEmpty() && thickness !in suitThicknesses) return null
+    } else if (thickness.isNotEmpty()) {
+        return null
+    }
+    val storedSize = if (type == "Kompenzator") {
+        if (size !in inventorySizes(type)) return null
+        size
+    } else {
+        ""
+    }
+    return InventoryEntry(index.toString(), type, code, condition, "", thickness = thickness, size = storedSize)
 }
 
 private fun quantityEntry(
     type: String,
     code: String,
     size: String,
+    thickness: String,
     condition: String,
     quantity: String,
     note: String,
     allowNote: Boolean,
     index: Int,
 ): InventoryEntry? {
-    if (code.isNotEmpty() || size.isNotEmpty() || condition.isNotEmpty()) return null
+    if (code.isNotEmpty() || size.isNotEmpty() || thickness.isNotEmpty() || condition.isNotEmpty()) return null
     val count = normalizeQuantity(quantity) ?: return null
     val storedNote = if (allowNote) napomenaOk(note) else note
     if (!allowNote && storedNote.isNotEmpty()) return null
     return InventoryEntry(index.toString(), type, "", "", count, storedNote)
 }
 
-private fun hasDuplicate(entries: List<InventoryEntry>): Boolean {
-    val pieces = entries.filter { !it.isQuantity() }
-    val quantities = entries.filter { it.isQuantity() }
-    if (pieces.size != pieces.map { it.type to it.code }.toSet().size) return true
-    if (quantities.size != quantities.map { it.type }.toSet().size) return true
-    return false
+private fun conflicts(entries: List<InventoryEntry>, entry: InventoryEntry): Boolean = if (entry.isQuantity()) {
+    entries.any { it.isQuantity() && it.type == entry.type }
+} else {
+    entries.any { !it.isQuantity() && it.type == entry.type && it.code == entry.code }
 }
 
 private fun parseCsvRow(line: String): List<String>? {

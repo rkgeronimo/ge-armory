@@ -51,12 +51,14 @@ Tablet pejzaž. Red najmanje 64px. Kacige nema.
 
 ## Šifra
 
-Odijelo, veličine 1–9. Čizma, veličine 3–12. Prva dva znaka su veličina, ostatak je broj komada. `0512` je veličina 5, broj 12. Veličina 12 piše se `12`.
+Odijelo, veličine 1–9. Prva dva znaka su veličina, ostatak je broj komada. `0512` je veličina 5, broj 12.
 
-Peraja, veličine `S`, `R`, `XL`. S početka je veličina, ostatak je broj. `R12` je veličina R, broj 12.
+Čizmice, veličine 3–12. Šifra počinje s `B`. Sljedeća dva znaka su veličina, ostatak je broj komada. `B0811` je veličina 8, broj 11. Veličina 12 piše se `12`, npr. `B1204`.
 
-Kompenzator, veličine `XS`, `S`, `M`, `L`, `XL`, `XXL`. S početka je veličina, ostatak je broj. `M12` je veličina M, broj 12.
+Peraja, veličine `S`, `R`, `XL`. S početka je veličina, ostatak je broj, jedan ili dva znaka. `R1` je broj 1, `R11` je broj 11.
 
-Rukavice, veličine `S`, `M`, `L`, `XL`. S početka je veličina, ostatak je broj. `M12` je veličina M, broj 12.
+Kompenzator, veličine `XS`, `S`, `M`, `L`, `XL`, `XXL`. Veličina nije u šifri. Šifra počinje s `J`, ostatak je broj. `J12` je broj 12.
+
+Rukavice, veličine `S`, `M`, `L`, `XL`. Šifra počinje s `G`, zatim veličina, ostatak je broj. `GM12` je veličina M, broj 12.
 
 Regulator nema veličinu. Šifra je samo broj. `12` je broj 12.

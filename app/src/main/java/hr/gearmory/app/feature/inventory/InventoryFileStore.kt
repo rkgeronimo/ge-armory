@@ -20,8 +20,8 @@ internal class InventoryFileStore(private val context: Context) {
         if (!canUseDownloads()) return InventoryLoad.Unavailable
         val bytes = readBytes() ?: return InventoryLoad.Unavailable
         val text = decodeInventory(bytes) ?: return InventoryLoad.Corrupt
-        val entries = parseInventory(text) ?: return InventoryLoad.Corrupt
-        return InventoryLoad.Ready(entries)
+        val read = parseInventory(text) ?: return InventoryLoad.Corrupt
+        return InventoryLoad.Ready(read.entries, read.dropped)
     }
 
     fun write(entries: List<InventoryEntry>): Boolean {
@@ -135,7 +135,7 @@ internal class InventoryFileStore(private val context: Context) {
 }
 
 internal sealed class InventoryLoad {
-    data class Ready(val entries: List<InventoryEntry>) : InventoryLoad()
+    data class Ready(val entries: List<InventoryEntry>, val dropped: Int) : InventoryLoad()
     data object Corrupt : InventoryLoad()
     data object Unavailable : InventoryLoad()
 }

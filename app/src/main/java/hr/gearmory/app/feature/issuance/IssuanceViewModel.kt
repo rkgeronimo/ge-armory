@@ -2,6 +2,7 @@ package hr.gearmory.app.feature.issuance
 
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.lifecycle.ViewModel
+import hr.gearmory.app.feature.equipment.typedNumberLimit
 
 internal val dummyMembers = listOf(
     "Ana Kovač",
@@ -38,7 +39,7 @@ internal class IssuanceViewModel : ViewModel() {
         equipmentValues[equipment] = candidate
             .uppercase()
             .filter { it.isDigit() || it == 'X' }
-            .take(12)
+            .take(typedNumberLimit(equipment))
     }
 
     fun clearEquipment(equipment: String) {

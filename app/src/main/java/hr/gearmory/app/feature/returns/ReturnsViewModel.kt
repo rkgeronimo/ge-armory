@@ -29,7 +29,7 @@ internal class ReturnsViewModel : ViewModel() {
         MemberHoldings(
             member = "Marko Marić",
             pieces = listOf(
-                HeldPiece("marko-cizmice", "Čizmice", "0811"),
+                HeldPiece("marko-cizmice", "Čizmice", "B0811"),
                 HeldPiece("marko-odijelo", "Odijelo", "0603"),
             ).toMutableStateList(),
         ),

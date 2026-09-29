@@ -55,6 +55,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import hr.gearmory.app.feature.equipment.codeLetter
+import hr.gearmory.app.feature.equipment.typedNumberLimit
 import hr.gearmory.app.feature.equipment.equipmentTypes
 import hr.gearmory.app.feature.equipment.pieceConditions
 import hr.gearmory.app.feature.equipment.pieceSize
@@ -67,19 +69,27 @@ internal fun InventoryScreen(viewModel: InventoryViewModel = viewModel()) {
     var regulator by rememberSaveable { mutableStateOf("") }
     var typed by rememberSaveable { mutableStateOf("") }
     var condition by rememberSaveable { mutableStateOf("Dobro") }
+    var thickness by rememberSaveable { mutableStateOf("") }
     var drafts by remember { mutableStateOf(mapOf<String, String>()) }
     var raznoName by rememberSaveable { mutableStateOf("") }
     var raznoCount by rememberSaveable { mutableStateOf("") }
     var raznoNote by rememberSaveable { mutableStateOf("") }
     val sizes = inventorySizes(type)
     val brands = if (type == "Regulator") regulatorTypes else emptyList()
-    val prefix = if (type == "Regulator") regulator else size
-    val code = prefix + typed
+    val inCode = when (type) {
+        "Regulator" -> regulator
+        "Kompenzator" -> ""
+        else -> size
+    }
+    val code = codeLetter(type) + inCode + typed
     val duplicate = code.isNotEmpty() && viewModel.entries.any { it.type == type && it.code == code }
-    val needsChoice = sizes.isNotEmpty() || brands.isNotEmpty()
+    val thicknesses = if (type == "Odijelo") suitThicknesses else emptyList()
+    val needsSize = type == "Peraje" || type == "Kompenzator" || type == "Rukavice"
     val canEnter = viewModel.notice != CsvReadError &&
         typed.isNotBlank() &&
-        (!needsChoice || prefix.isNotBlank()) &&
+        (!needsSize || size.isNotBlank()) &&
+        (brands.isEmpty() || regulator.isNotBlank()) &&
+        (thicknesses.isEmpty() || thickness in thicknesses) &&
         !duplicate
     val visible = viewModel.entries.take(5)
     val isPortrait =
@@ -94,17 +104,19 @@ internal fun InventoryScreen(viewModel: InventoryViewModel = viewModel()) {
         type = option
         if (size !in inventorySizes(option)) size = ""
         if (option != "Regulator") regulator = ""
+        if (option != "Odijelo") thickness = ""
         if (option == ChipOstalo) {
             drafts = quantityTypes.associateWith { viewModel.quantityOf(it) }
         }
     }
 
     fun enterPiece() {
-        viewModel.addPiece(type, code, condition)
+        viewModel.addPiece(type, code, condition, thickness, if (type == "Kompenzator") size else "")
         if (viewModel.notice != null) return
         typed = ""
         size = ""
         regulator = ""
+        thickness = ""
         condition = "Dobro"
     }
 
@@ -144,13 +156,16 @@ internal fun InventoryScreen(viewModel: InventoryViewModel = viewModel()) {
                 onRegulator = { regulator = it },
                 condition = condition,
                 onCondition = { condition = it },
+                thicknesses = thicknesses,
+                thickness = thickness,
+                onThickness = { thickness = it },
                 code = code,
                 duplicate = duplicate,
                 canEnter = canEnter,
                 onKey = { key ->
                     typed = when (key) {
                         "⌫" -> typed.dropLast(1)
-                        else -> (typed + key).filter { it.isDigit() || it == 'X' }.take(12)
+                        else -> (typed + key).filter { it.isDigit() || it == 'X' }.take(typedNumberLimit(type))
                     }
                 },
                 onEnter = ::enterPiece,
@@ -204,13 +219,16 @@ internal fun InventoryScreen(viewModel: InventoryViewModel = viewModel()) {
                     onRegulator = { regulator = it },
                     condition = condition,
                     onCondition = { condition = it },
+                    thicknesses = thicknesses,
+                    thickness = thickness,
+                    onThickness = { thickness = it },
                     code = code,
                     duplicate = duplicate,
                     canEnter = canEnter,
                     onKey = { key ->
                         typed = when (key) {
                             "⌫" -> typed.dropLast(1)
-                            else -> (typed + key).filter { it.isDigit() || it == 'X' }.take(12)
+                            else -> (typed + key).filter { it.isDigit() || it == 'X' }.take(typedNumberLimit(type))
                         }
                     },
                     onEnter = ::enterPiece,
@@ -281,6 +299,7 @@ private fun EntryList(
                     type = "Vrsta",
                     code = "Šifra",
                     size = "Veličina",
+                    thickness = "Debljina",
                     condition = "Stanje",
                     quantity = "Količina",
                     note = "Napomena",
@@ -307,8 +326,9 @@ private fun EntryList(
                     size = if (entry.isQuantity()) {
                         "—"
                     } else {
-                        pieceSize(entry.type, entry.code).ifBlank { "—" }
+                        shownSize(entry.type, entry.code, entry.size).ifBlank { "—" }
                     },
+                    thickness = if (entry.type == "Odijelo") entry.thickness.ifBlank { "—" } else "—",
                     condition = if (entry.isQuantity()) "—" else entry.condition,
                     quantity = if (entry.isQuantity()) entry.quantity else "—",
                     note = if (entry.note.isEmpty()) "—" else entry.note,
@@ -328,7 +348,11 @@ private fun InventoryNotice(notice: String?) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 8.dp),
-        color = MaterialTheme.colorScheme.error,
+        color = if (notice == CsvReadError || notice == CsvWriteError) {
+            MaterialTheme.colorScheme.error
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        },
         style = MaterialTheme.typography.bodyLarge,
     )
 }
@@ -344,6 +368,9 @@ private fun ColumnScope.InventoryEditor(
     onRegulator: (String) -> Unit,
     condition: String,
     onCondition: (String) -> Unit,
+    thicknesses: List<String>,
+    thickness: String,
+    onThickness: (String) -> Unit,
     code: String,
     duplicate: Boolean,
     canEnter: Boolean,
@@ -384,6 +411,9 @@ private fun ColumnScope.InventoryEditor(
             onRegulator = onRegulator,
             condition = condition,
             onCondition = onCondition,
+            thicknesses = thicknesses,
+            thickness = thickness,
+            onThickness = onThickness,
             code = code,
             duplicate = duplicate,
             canEnter = canEnter,
@@ -503,6 +533,9 @@ private fun ColumnScope.EntryForm(
     onRegulator: (String) -> Unit,
     condition: String,
     onCondition: (String) -> Unit,
+    thicknesses: List<String>,
+    thickness: String,
+    onThickness: (String) -> Unit,
     code: String,
     duplicate: Boolean,
     canEnter: Boolean,
@@ -527,6 +560,29 @@ private fun ColumnScope.EntryForm(
                 onClick = { onCondition(option) },
                 modifier = Modifier.weight(1f),
             )
+        }
+    }
+    if (thicknesses.isNotEmpty()) {
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = "Debljina",
+            modifier = Modifier.fillMaxWidth(),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            thicknesses.forEach { option ->
+                SelectChip(
+                    label = option,
+                    selected = option == thickness,
+                    onClick = { onThickness(option) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
     if (brands.isNotEmpty()) {
@@ -622,6 +678,7 @@ private fun EntryRow(
     type: String,
     code: String,
     size: String,
+    thickness: String,
     condition: String,
     quantity: String,
     note: String,
@@ -668,6 +725,16 @@ private fun EntryRow(
         Text(
             text = size,
             modifier = Modifier.weight(0.95f),
+            style = style,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
+            color = color,
+        )
+        Text(
+            text = thickness,
+            modifier = Modifier.weight(0.9f),
             style = style,
             textAlign = TextAlign.Center,
             maxLines = 1,

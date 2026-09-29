@@ -269,7 +269,7 @@ private fun PieceCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     FieldLabel("Veličina")
                     Spacer(Modifier.width(6.dp))
-                    FieldValue(pieceSize(piece.type, piece.code).ifBlank { "—" })
+                    FieldValue(piece.size.ifBlank { pieceSize(piece.type, piece.code) }.ifBlank { "—" })
                 }
                 if (piece.status == StatusIssuedLabel) {
                     FieldValue(listOfNotNull(piece.holder, piece.issuedOn).joinToString("  "))
@@ -313,7 +313,7 @@ private fun PieceTable(
             TableRow(
                 code = piece.code,
                 type = piece.type,
-                size = pieceSize(piece.type, piece.code).ifBlank { "—" },
+                size = piece.size.ifBlank { pieceSize(piece.type, piece.code) }.ifBlank { "—" },
                 status = piece.status,
                 holder = if (piece.status == StatusIssuedLabel) piece.holder.orEmpty() else "",
                 issuedOn = if (piece.status == StatusIssuedLabel) piece.issuedOn.orEmpty() else "",
