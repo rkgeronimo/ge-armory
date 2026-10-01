@@ -72,7 +72,7 @@ internal fun AppShell(
             )
         } else {
             Row(modifier = Modifier.fillMaxSize()) {
-                Surface(color = MaterialTheme.colorScheme.surfaceVariant) {
+                Surface(color = MaterialTheme.colorScheme.surface) {
                     NavigationPanel(
                         selected = selected,
                         darkTheme = darkTheme,
@@ -86,6 +86,7 @@ internal fun AppShell(
                     modifier = Modifier
                         .fillMaxHeight()
                         .width(1.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant,
                 )
                 ShellContent(
                     selected = selected,
@@ -112,7 +113,7 @@ private fun PortraitShell(
         drawerContent = {
             ModalDrawerSheet(
                 modifier = Modifier.width(240.dp),
-                drawerContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                drawerContainerColor = MaterialTheme.colorScheme.surface,
                 windowInsets = WindowInsets(0, 0, 0, 0),
             ) {
                 NavigationPanel(
@@ -171,7 +172,7 @@ private fun ShellContent(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(MaterialTheme.colorScheme.surfaceVariant),
     ) {
         when (selected) {
             Destination.Home -> HomeScreen()

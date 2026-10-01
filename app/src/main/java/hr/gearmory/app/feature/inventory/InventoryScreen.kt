@@ -294,7 +294,7 @@ private fun EntryList(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Column {
-            Box(Modifier.background(MaterialTheme.colorScheme.surfaceVariant)) {
+            Box(Modifier.background(MaterialTheme.colorScheme.primaryContainer)) {
                 EntryRow(
                     type = "Vrsta",
                     code = "Šifra",
@@ -797,7 +797,7 @@ private fun SelectChip(
             containerColor = if (selected) {
                 MaterialTheme.colorScheme.primary
             } else {
-                MaterialTheme.colorScheme.surfaceVariant
+                MaterialTheme.colorScheme.surface
             },
             contentColor = if (selected) {
                 MaterialTheme.colorScheme.onPrimary
@@ -805,7 +805,7 @@ private fun SelectChip(
                 MaterialTheme.colorScheme.onSurface
             },
         ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp),
     ) {
         Text(
             text = label,

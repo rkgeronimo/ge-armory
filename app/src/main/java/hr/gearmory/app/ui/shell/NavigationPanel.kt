@@ -108,7 +108,7 @@ private fun NavigationDestination(
         color = when {
             !selected -> Color.Transparent
             darkTheme -> Color(0xFF334155)
-            else -> MaterialTheme.colorScheme.surface
+            else -> MaterialTheme.colorScheme.primaryContainer
         },
         contentColor = color,
         shape = RoundedCornerShape(12.dp),

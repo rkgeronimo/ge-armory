@@ -161,7 +161,7 @@ private fun PopisTable(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Column {
-            Box(Modifier.background(MaterialTheme.colorScheme.surfaceVariant)) {
+            Box(Modifier.background(MaterialTheme.colorScheme.primaryContainer)) {
             PopisRow(
                 type = "Vrsta",
                 code = "Šifra",
@@ -351,7 +351,7 @@ private fun PopisEdit(
                                 containerColor = if (option == gearSize) {
                                     MaterialTheme.colorScheme.primary
                                 } else {
-                                    MaterialTheme.colorScheme.surfaceVariant
+                                    MaterialTheme.colorScheme.surface
                                 },
                                 contentColor = if (option == gearSize) {
                                     MaterialTheme.colorScheme.onPrimary
@@ -359,7 +359,7 @@ private fun PopisEdit(
                                     MaterialTheme.colorScheme.onSurface
                                 },
                             ),
-                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp),
                         ) {
                             Text(option)
                         }
@@ -384,7 +384,7 @@ private fun PopisEdit(
                                 containerColor = if (option == thickness) {
                                     MaterialTheme.colorScheme.primary
                                 } else {
-                                    MaterialTheme.colorScheme.surfaceVariant
+                                    MaterialTheme.colorScheme.surface
                                 },
                                 contentColor = if (option == thickness) {
                                     MaterialTheme.colorScheme.onPrimary
@@ -392,7 +392,7 @@ private fun PopisEdit(
                                     MaterialTheme.colorScheme.onSurface
                                 },
                             ),
-                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp),
                         ) {
                             Text(option)
                         }
@@ -416,7 +416,7 @@ private fun PopisEdit(
                             containerColor = if (option == condition) {
                                 MaterialTheme.colorScheme.primary
                             } else {
-                                MaterialTheme.colorScheme.surfaceVariant
+                                MaterialTheme.colorScheme.surface
                             },
                             contentColor = if (option == condition) {
                                 MaterialTheme.colorScheme.onPrimary
@@ -424,7 +424,7 @@ private fun PopisEdit(
                                 MaterialTheme.colorScheme.onSurface
                             },
                         ),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp),
                     ) {
                         Text(option)
                     }

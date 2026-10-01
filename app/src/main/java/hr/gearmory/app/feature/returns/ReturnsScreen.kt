@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,15 +27,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,16 +57,21 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import hr.gearmory.app.remote.Reservation
 import hr.gearmory.app.remote.ReservedPiece
-import hr.gearmory.app.remote.listLabel
 import hr.gearmory.app.remote.openPieces
 import hr.gearmory.app.remote.pieceTitle
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ReturnsScreen() {
     var pickedId by rememberSaveable { mutableStateOf<Long?>(null) }
     var opened by rememberSaveable { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf("") }
     val viewModel: ReturnsViewModel = viewModel()
     val shown = viewModel.reservations.filter { it.openPieces().isNotEmpty() }
+    val filtered = shown.filter {
+        it.userName.contains(query, ignoreCase = true) ||
+            it.excursion.orEmpty().contains(query, ignoreCase = true)
+    }
     val selected = shown.firstOrNull { it.id == pickedId }
     val pieces = selected?.openPieces().orEmpty()
     val marked = pieces.any { viewModel.marks["${selected?.id}:${it.first}"] != null }
@@ -108,97 +118,125 @@ internal fun ReturnsScreen() {
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                IconButton(
-                    onClick = {
-                        viewModel.clearMarks()
-                        pickedId = null
-                        viewModel.reload()
-                    },
-                    enabled = !viewModel.saving,
+                Row(
                     modifier = Modifier
-                        .align(Alignment.End)
-                        .padding(end = 8.dp)
-                        .size(56.dp),
-                ) {
-                    Icon(
-                        Icons.Rounded.Refresh,
-                        contentDescription = "Osvježi",
-                    )
-                }
-                Card(
-                    modifier = Modifier
-                        .weight(1f)
                         .widthIn(max = 720.dp)
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (shown.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = "Nema zahtjeva",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    } else {
-                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                            shown.forEachIndexed { index, reservation ->
-                                Surface(
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp),
+                        placeholder = { Text("Pretraži") },
+                        leadingIcon = {
+                            Icon(Icons.Rounded.Search, contentDescription = null)
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                            disabledContainerColor = MaterialTheme.colorScheme.surface,
+                        ),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            viewModel.clearMarks()
+                            pickedId = null
+                            viewModel.reload()
+                        },
+                        enabled = !viewModel.saving,
+                        modifier = Modifier.size(56.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(0.dp),
+                    ) {
+                        Icon(
+                            Icons.Rounded.Refresh,
+                            contentDescription = "Osvježi",
+                        )
+                    }
+                }
+                if (filtered.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = if (query.isBlank()) "Nema zahtjeva" else "Nema pronađenih",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .widthIn(max = 720.dp)
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        filtered.forEach { reservation ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                            ) {
+                                Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .heightIn(min = 64.dp)
-                                        .clickable { pick(reservation) },
-                                    color = if (reservation.id == pickedId) {
-                                        MaterialTheme.colorScheme.primaryContainer
-                                    } else {
-                                        MaterialTheme.colorScheme.surface
-                                    },
+                                        .heightIn(min = 96.dp)
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = reservation.listLabel(),
-                                            fontWeight = FontWeight.Medium,
-                                            textAlign = TextAlign.Center,
-                                            maxLines = 2,
+                                            text = reservation.userName,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.SemiBold,
+                                            maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
                                         )
+                                        val trip = reservation.excursion?.takeIf { it.isNotBlank() }
+                                        if (trip != null) {
+                                            Spacer(Modifier.height(4.dp))
+                                            Text(
+                                                text = trip,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                        }
                                     }
-                                }
-                                if (index < shown.lastIndex) {
-                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                                    Spacer(Modifier.width(12.dp))
+                                    Button(
+                                        onClick = {
+                                            pick(reservation)
+                                            opened = true
+                                        },
+                                        modifier = Modifier.height(48.dp),
+                                        shape = RoundedCornerShape(12.dp),
+                                    ) {
+                                        Text("Razduživanje")
+                                    }
                                 }
                             }
                         }
                     }
-                }
-                Spacer(Modifier.height(16.dp))
-                Button(
-                    onClick = { opened = true },
-                    enabled = selected != null,
-                    modifier = Modifier
-                        .widthIn(max = 720.dp)
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .padding(bottom = 16.dp)
-                        .height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Text("Razduživanje", fontWeight = FontWeight.SemiBold)
                 }
             }
         } else {

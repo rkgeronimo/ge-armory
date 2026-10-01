@@ -34,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -98,6 +99,11 @@ internal fun EquipmentScreen() {
                 leadingIcon = { IconSearch() },
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                    disabledContainerColor = MaterialTheme.colorScheme.surface,
+                ),
             )
             Spacer(Modifier.height(10.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -204,7 +210,7 @@ private fun FilterChip(
             containerColor = if (selected) {
                 MaterialTheme.colorScheme.primary
             } else {
-                MaterialTheme.colorScheme.surfaceVariant
+                MaterialTheme.colorScheme.surface
             },
             contentColor = if (selected) {
                 MaterialTheme.colorScheme.onPrimary
@@ -212,7 +218,7 @@ private fun FilterChip(
                 MaterialTheme.colorScheme.onSurface
             },
         ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp),
     ) {
         Text(label)
     }
@@ -294,7 +300,7 @@ private fun PieceTable(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Column {
-            Box(Modifier.background(MaterialTheme.colorScheme.surfaceVariant)) {
+            Box(Modifier.background(MaterialTheme.colorScheme.primaryContainer)) {
             TableRow(
                 code = "Šifra",
                 type = "Vrsta opreme",

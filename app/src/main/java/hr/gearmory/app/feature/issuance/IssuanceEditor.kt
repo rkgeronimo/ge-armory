@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,6 +30,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -44,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -57,19 +60,29 @@ internal fun IssuanceEditor(
     onEquipmentSelected: (String) -> Unit,
     equipmentValues: MutableMap<String, String>,
     equipmentSizes: MutableMap<String, String>,
+    requested: Map<String, String>,
     onKey: (String, String) -> Unit,
     onClearEquipment: (String) -> Unit,
+    saving: Boolean,
+    onCancel: () -> Unit,
     onIssue: () -> Unit,
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+    ) {
         if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
             CompactIssuanceEditor(
                 selectedEquipment = selectedEquipment,
                 onEquipmentSelected = onEquipmentSelected,
                 equipmentValues = equipmentValues,
                 equipmentSizes = equipmentSizes,
+                requested = requested,
                 onKey = onKey,
                 onClearEquipment = onClearEquipment,
+                saving = saving,
+                onCancel = onCancel,
                 onIssue = onIssue,
             )
         } else {
@@ -78,8 +91,11 @@ internal fun IssuanceEditor(
                 onEquipmentSelected = onEquipmentSelected,
                 equipmentValues = equipmentValues,
                 equipmentSizes = equipmentSizes,
+                requested = requested,
                 onKey = onKey,
                 onClearEquipment = onClearEquipment,
+                saving = saving,
+                onCancel = onCancel,
                 onIssue = onIssue,
             )
         }
@@ -92,8 +108,11 @@ private fun WideIssuanceEditor(
     onEquipmentSelected: (String) -> Unit,
     equipmentValues: MutableMap<String, String>,
     equipmentSizes: MutableMap<String, String>,
+    requested: Map<String, String>,
     onKey: (String, String) -> Unit,
     onClearEquipment: (String) -> Unit,
+    saving: Boolean,
+    onCancel: () -> Unit,
     onIssue: () -> Unit,
 ) {
     Row(modifier = Modifier.fillMaxSize()) {
@@ -257,12 +276,15 @@ private fun WideIssuanceEditor(
             IssuanceSummary(
                 equipmentValues = equipmentValues,
                 equipmentSizes = equipmentSizes,
+                requested = requested,
             )
             Spacer(Modifier.height(10.dp))
             IssuanceActions(
                 enabled = loanEquipmentTypes.any {
                     loanReady(it, equipmentSizes[it].orEmpty(), equipmentValues[it].orEmpty())
                 },
+                saving = saving,
+                onCancel = onCancel,
                 onIssue = onIssue,
             )
         }
@@ -275,8 +297,11 @@ private fun CompactIssuanceEditor(
     onEquipmentSelected: (String) -> Unit,
     equipmentValues: MutableMap<String, String>,
     equipmentSizes: MutableMap<String, String>,
+    requested: Map<String, String>,
     onKey: (String, String) -> Unit,
     onClearEquipment: (String) -> Unit,
+    saving: Boolean,
+    onCancel: () -> Unit,
     onIssue: () -> Unit,
 ) {
     Column(
@@ -314,13 +339,14 @@ private fun CompactIssuanceEditor(
                         color = if (isSelected) {
                             MaterialTheme.colorScheme.primary
                         } else {
-                            MaterialTheme.colorScheme.surfaceVariant
+                            MaterialTheme.colorScheme.surface
                         },
                         contentColor = if (isSelected) {
                             MaterialTheme.colorScheme.onPrimary
                         } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                            MaterialTheme.colorScheme.onSurface
                         },
+                        shadowElevation = 1.dp,
                         shape = RoundedCornerShape(12.dp),
                     ) {
                         Row(
@@ -369,6 +395,9 @@ private fun CompactIssuanceEditor(
                         }
                     }
                 }
+                repeat(3 - row.size) {
+                    Spacer(Modifier.weight(1f))
+                }
             }
         }
 
@@ -401,12 +430,15 @@ private fun CompactIssuanceEditor(
         IssuanceSummary(
             equipmentValues = equipmentValues,
             equipmentSizes = equipmentSizes,
+            requested = requested,
         )
         Spacer(Modifier.height(10.dp))
         IssuanceActions(
             enabled = loanEquipmentTypes.any {
                 loanReady(it, equipmentSizes[it].orEmpty(), equipmentValues[it].orEmpty())
             },
+            saving = saving,
+            onCancel = onCancel,
             onIssue = onIssue,
         )
         Spacer(Modifier.height(16.dp))
@@ -416,29 +448,57 @@ private fun CompactIssuanceEditor(
 @Composable
 private fun IssuanceActions(
     enabled: Boolean,
+    saving: Boolean,
+    onCancel: () -> Unit,
     onIssue: () -> Unit,
 ) {
-    Button(
-        onClick = onIssue,
-        enabled = enabled,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp),
-        shape = RoundedCornerShape(12.dp),
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 2.dp,
-            pressedElevation = 0.dp,
-            disabledElevation = 0.dp,
-        ),
-        colors = ButtonDefaults.buttonColors(
-            disabledContainerColor = MaterialTheme.colorScheme.outline,
-            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-        ),
-    ) {
-        Text(
-            text = "Izdaj opremu",
-            fontWeight = FontWeight.SemiBold,
-        )
+    Row(modifier = Modifier.fillMaxWidth()) {
+            Button(
+                onClick = onCancel,
+                enabled = !saving,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp),
+            ) {
+                Text("Odustani")
+            }
+            Spacer(Modifier.width(12.dp))
+            Button(
+                onClick = { if (!saving) onIssue() },
+                enabled = enabled || saving,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 2.dp,
+                    pressedElevation = 0.dp,
+                    disabledElevation = 0.dp,
+                ),
+                colors = ButtonDefaults.buttonColors(
+                    disabledContainerColor = MaterialTheme.colorScheme.outline,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+            ) {
+                if (saving) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Text(
+                        text = "Izdaj opremu",
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
     }
 }
 
@@ -530,13 +590,14 @@ private fun ChoiceRow(
                 color = if (isSelected) {
                     MaterialTheme.colorScheme.primary
                 } else {
-                    MaterialTheme.colorScheme.surfaceVariant
+                    MaterialTheme.colorScheme.surface
                 },
                 contentColor = if (isSelected) {
                     MaterialTheme.colorScheme.onPrimary
                 } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                    MaterialTheme.colorScheme.onSurface
                 },
+                shadowElevation = 1.dp,
                 shape = MaterialTheme.shapes.medium,
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -623,79 +684,83 @@ private fun NumericKeypad(
 private fun IssuanceSummary(
     equipmentValues: Map<String, String>,
     equipmentSizes: Map<String, String>,
+    requested: Map<String, String>,
 ) {
-    Box(
+    Card(
         modifier = Modifier.fillMaxWidth(),
-        contentAlignment = Alignment.Center,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth(0.88f)
-                .widthIn(max = 720.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
-            shape = RoundedCornerShape(12.dp),
-        ) {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "SAŽETAK",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(
-                        text = "${loanEquipmentTypes.count { loanReady(it, equipmentSizes[it].orEmpty(), equipmentValues[it].orEmpty()) }} / ${loanEquipmentTypes.size} popunjeno",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Spacer(Modifier.height(6.dp))
-                loanEquipmentTypes.chunked(2).forEach { row ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(18.dp),
-                    ) {
-                        row.forEach { equipment ->
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 5.dp),
-                                ) {
-                                    Text(
-                                        text = equipment,
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                    Text(
-                                        text = loanShown(
-                                            equipment,
-                                            equipmentSizes[equipment].orEmpty(),
-                                            equipmentValues[equipment].orEmpty(),
-                                        ).ifBlank { "—" },
-                                        fontWeight = FontWeight.SemiBold,
-                                    )
-                                }
-                                HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outline.copy(
-                                        alpha = 0.18f,
-                                    ),
-                                )
-                            }
-                        }
-                        if (row.size == 1) {
-                            Spacer(Modifier.weight(1f))
-                        }
-                    }
-                }
+        Column {
+            Box(Modifier.background(MaterialTheme.colorScheme.primaryContainer)) {
+                SummaryRow(name = "Oprema", requested = "Traženo", written = "Upisano", header = true)
+            }
+            loanEquipmentTypes.forEach { equipment ->
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                SummaryRow(
+                    name = equipment,
+                    requested = requested[equipment] ?: "—",
+                    written = loanShown(
+                        equipment,
+                        equipmentSizes[equipment].orEmpty(),
+                        equipmentValues[equipment].orEmpty(),
+                    ).ifBlank { "—" },
+                    header = false,
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun SummaryRow(
+    name: String,
+    requested: String,
+    written: String,
+    header: Boolean,
+) {
+    val style = MaterialTheme.typography.bodyMedium
+    val color = if (header) {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 40.dp)
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = name,
+            modifier = Modifier.weight(1.2f),
+            style = style,
+            fontWeight = FontWeight.Medium,
+            color = color,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = requested,
+            modifier = Modifier.weight(1f),
+            style = style,
+            fontWeight = FontWeight.Medium,
+            color = color,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = written,
+            modifier = Modifier.weight(1f),
+            style = style,
+            fontWeight = if (header || written == "—") FontWeight.Medium else FontWeight.SemiBold,
+            color = color,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }

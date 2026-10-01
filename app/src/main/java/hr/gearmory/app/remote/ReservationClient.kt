@@ -107,8 +107,12 @@ internal fun pieceSize(key: String, piece: ReservedPiece): String? =
     if (key == "lead") null else piece.size?.takeIf { it.isNotBlank() }
 
 internal object ReservationClient {
-    fun listActive(credentials: StaffCredentials): List<Reservation> {
-        val body = call(credentials, "GET", "/reservations?state=1", null)
+    fun listActive(credentials: StaffCredentials): List<Reservation> = list(credentials, 1)
+
+    fun listPending(credentials: StaffCredentials): List<Reservation> = list(credentials, 0)
+
+    private fun list(credentials: StaffCredentials, state: Int): List<Reservation> {
+        val body = call(credentials, "GET", "/reservations?state=$state", null)
         val array = JSONArray(body)
         return List(array.length()) { index -> parseReservation(array.getJSONObject(index)) }
     }
@@ -122,6 +126,28 @@ internal object ReservationClient {
         returnedByKey.forEach { (key, returned) ->
             if (key !in equipmentKeys || returned !in setOf(0, 1, 3)) return@forEach
             equipment.put(key, JSONObject().put("returned", returned))
+        }
+        val body = call(
+            credentials,
+            "POST",
+            "/reservations/$id",
+            JSONObject().put("equipment", equipment).toString(),
+        )
+        return parseReservation(JSONObject(body))
+    }
+
+    fun assignIssued(
+        credentials: StaffCredentials,
+        id: Long,
+        codeByKey: Map<String, String>,
+    ): Reservation {
+        val equipment = JSONObject()
+        codeByKey.forEach { (key, code) ->
+            if (key !in equipmentKeys || code.isBlank()) return@forEach
+            equipment.put(
+                key,
+                JSONObject().put("code", code).put("returned", 1),
+            )
         }
         val body = call(
             credentials,

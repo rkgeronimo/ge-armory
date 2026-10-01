@@ -1,23 +1,36 @@
 package hr.gearmory.app.feature.issuance
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import hr.gearmory.app.feature.equipment.typedNumberLimit
 import hr.gearmory.app.feature.inventory.regulatorTypes
-
-internal val dummyMembers = listOf(
-    "Ana Kovač",
-    "Marko Marić",
-    "Ivan Horvat",
-    "Petra Babić",
-    "Luka Jurić",
-    "Ema Novak",
-    "Toni Radić",
-    "Mia Perić",
-)
+import hr.gearmory.app.remote.Reservation
+import hr.gearmory.app.remote.ReservationClient
+import hr.gearmory.app.remote.ReservedPiece
+import hr.gearmory.app.remote.StaffSession
+import hr.gearmory.app.remote.reservationNotice
 
 internal const val LoanMaskaDisalica = "Maska i Disalica"
 internal const val LoanOlovo = "Olovo"
+
+internal val loanApiKey = mapOf(
+    "Odijelo" to "suit",
+    "Čizmice" to "boots",
+    "Peraje" to "fins",
+    "Kompenzator" to "bcd",
+    "Regulator" to "regulator",
+    LoanMaskaDisalica to "mask",
+    LoanOlovo to "lead",
+)
+
+internal fun requestedMark(piece: ReservedPiece?): String {
+    if (piece == null || !piece.needed) return "—"
+    return piece.size?.takeIf { it.isNotBlank() } ?: "Da"
+}
 
 internal val loanEquipmentTypes = listOf(
     "Odijelo",
@@ -54,6 +67,26 @@ internal fun loanReady(type: String, size: String, number: String): Boolean {
 }
 
 internal class IssuanceViewModel : ViewModel() {
+    val reservations = mutableStateListOf<Reservation>()
+    var notice by mutableStateOf<String?>(null)
+    var loading by mutableStateOf(true)
+    var saving by mutableStateOf(false)
+
+    fun reload() {
+        loading = true
+        notice = null
+        StaffSession.request(ReservationClient::listPending) { result ->
+            loading = false
+            result.fold(
+                onSuccess = { loaded ->
+                    reservations.clear()
+                    reservations.addAll(loaded)
+                },
+                onFailure = { notice = reservationNotice(it) },
+            )
+        }
+    }
+
     val equipmentValues = mutableStateMapOf<String, String>().apply {
         loanEquipmentTypes.forEach { put(it, "") }
     }
@@ -84,5 +117,38 @@ internal class IssuanceViewModel : ViewModel() {
     fun clearAll() {
         loanEquipmentTypes.forEach { equipmentValues[it] = "" }
         equipmentSizes.clear()
+    }
+
+    fun issue(reservationId: Long, onDone: () -> Unit) {
+        val codes = buildMap {
+            loanEquipmentTypes.forEach { type ->
+                val key = loanApiKey[type] ?: return@forEach
+                val number = equipmentValues[type].orEmpty()
+                val size = equipmentSizes[type].orEmpty()
+                if (!loanReady(type, size, number)) return@forEach
+                val code = loanField(type, size, number)
+                if (code.isNotBlank()) put(key, code)
+            }
+        }
+        if (codes.isEmpty() || saving) return
+        saving = true
+        notice = null
+        StaffSession.request({ credentials ->
+            ReservationClient.assignIssued(credentials, reservationId, codes)
+        }) { result ->
+            saving = false
+            result.fold(
+                onSuccess = { updated ->
+                    val index = reservations.indexOfFirst { it.id == updated.id }
+                    if (index >= 0) {
+                        if (updated.state == 0) reservations[index] = updated
+                        else reservations.removeAt(index)
+                    }
+                    clearAll()
+                    onDone()
+                },
+                onFailure = { notice = reservationNotice(it) },
+            )
+        }
     }
 }
