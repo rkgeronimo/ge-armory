@@ -236,6 +236,11 @@ private fun WideIssuanceEditor(
                 .fillMaxHeight()
                 .padding(22.dp),
         ) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+            ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(24.dp),
@@ -278,6 +283,7 @@ private fun WideIssuanceEditor(
                 equipmentSizes = equipmentSizes,
                 requested = requested,
             )
+            }
             Spacer(Modifier.height(10.dp))
             IssuanceActions(
                 enabled = loanEquipmentTypes.any {
@@ -307,9 +313,13 @@ private fun CompactIssuanceEditor(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+        ) {
         Text(
             text = "OPREMA",
             style = MaterialTheme.typography.labelMedium,
@@ -414,7 +424,7 @@ private fun CompactIssuanceEditor(
                 equipmentSizes[selectedEquipment].orEmpty().isNotEmpty(),
             placeholder = if (selectedEquipment == LoanOlovo) "Količina" else "Oznaka opreme",
         )
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(8.dp))
         EquipmentSizeSelector(
             equipment = selectedEquipment,
             selectedSize = equipmentSizes[selectedEquipment],
@@ -426,12 +436,13 @@ private fun CompactIssuanceEditor(
                 .fillMaxWidth(),
             onKey = { key -> onKey(selectedEquipment, key) },
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(8.dp))
         IssuanceSummary(
             equipmentValues = equipmentValues,
             equipmentSizes = equipmentSizes,
             requested = requested,
         )
+        }
         Spacer(Modifier.height(10.dp))
         IssuanceActions(
             enabled = loanEquipmentTypes.any {
@@ -720,7 +731,7 @@ private fun SummaryRow(
     written: String,
     header: Boolean,
 ) {
-    val style = MaterialTheme.typography.bodyMedium
+    val style = MaterialTheme.typography.bodySmall
     val color = if (header) {
         MaterialTheme.colorScheme.onSurfaceVariant
     } else {
@@ -729,8 +740,8 @@ private fun SummaryRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 40.dp)
-            .padding(horizontal = 16.dp),
+            .heightIn(min = 32.dp)
+            .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
