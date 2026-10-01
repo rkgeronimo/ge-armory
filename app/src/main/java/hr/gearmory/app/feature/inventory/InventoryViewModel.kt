@@ -16,6 +16,7 @@ internal data class InventoryEntry(
     val note: String = "",
     val thickness: String = "",
     val size: String = "",
+    val enteredOn: String = "",
 )
 
 internal class InventoryViewModel(app: Application) : AndroidViewModel(app) {
@@ -55,7 +56,16 @@ internal class InventoryViewModel(app: Application) : AndroidViewModel(app) {
     fun addPiece(type: String, code: String, condition: String, thickness: String, size: String) {
         if (blocked || !pieceCodeOk(type, code) || !thicknessOk(type, thickness) || !sizeOk(type, size)) return
         if (entries.any { it.type == type && it.code == code }) return
-        val row = InventoryEntry(freshId(), type, code, condition, "", thickness = thickness, size = size)
+        val row = InventoryEntry(
+            freshId(),
+            type,
+            code,
+            condition,
+            "",
+            thickness = thickness,
+            size = size,
+            enteredOn = todayEntered(),
+        )
         commit(listOf(row) + entries)
     }
 
@@ -75,7 +85,7 @@ internal class InventoryViewModel(app: Application) : AndroidViewModel(app) {
                 usedIds += fresh.toInt()
                 fresh
             }
-            InventoryEntry(id, type, "", "", count, "")
+            InventoryEntry(id, type, "", "", count, "", enteredOn = previous?.enteredOn ?: todayEntered())
         }
         val ids = rows.map { it.id }.toSet()
         commit(rows + next.filterNot { it.id in ids })
@@ -90,7 +100,15 @@ internal class InventoryViewModel(app: Application) : AndroidViewModel(app) {
         val count = normalizeQuantity(raw) ?: return
         val storedNote = if (name in quantityTypes) "" else napomenaOk(note)
         val previous = entries.firstOrNull { it.type == name && it.isQuantity() }
-        val row = InventoryEntry(previous?.id ?: freshId(), name, "", "", count, storedNote)
+        val row = InventoryEntry(
+            previous?.id ?: freshId(),
+            name,
+            "",
+            "",
+            count,
+            storedNote,
+            enteredOn = previous?.enteredOn ?: todayEntered(),
+        )
         val rest = entries.filterNot { it.id == row.id }
         commit(listOf(row) + rest)
     }

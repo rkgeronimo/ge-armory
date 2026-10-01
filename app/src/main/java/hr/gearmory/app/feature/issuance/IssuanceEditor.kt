@@ -44,9 +44,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import hr.gearmory.app.feature.inventory.inventorySizes
+import hr.gearmory.app.feature.inventory.regulatorTypes
 
 @Composable
 internal fun IssuanceEditor(
@@ -111,6 +114,7 @@ private fun WideIssuanceEditor(
                 loanEquipmentTypes.forEach { equipment ->
                     val isSelected = equipment == selectedEquipment
                     val value = equipmentValues[equipment].orEmpty()
+                    val filled = loanReady(equipment, equipmentSizes[equipment].orEmpty(), value)
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -137,7 +141,7 @@ private fun WideIssuanceEditor(
                                 modifier = Modifier
                                     .size(28.dp)
                                     .background(
-                                        color = if (value.isNotBlank()) {
+                                        color = if (filled) {
                                             if (isSelected) {
                                                 Color.White.copy(alpha = 0.18f)
                                             } else {
@@ -151,7 +155,7 @@ private fun WideIssuanceEditor(
                                     .border(
                                         border = BorderStroke(
                                             width = 1.dp,
-                                            color = if (value.isBlank()) {
+                                            color = if (!filled) {
                                                 if (isSelected) {
                                                     Color.White.copy(alpha = 0.75f)
                                                 } else {
@@ -165,7 +169,7 @@ private fun WideIssuanceEditor(
                                     ),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                if (value.isNotBlank()) {
+                                if (filled) {
                                     Icon(
                                         imageVector = Icons.Rounded.Check,
                                         contentDescription = "Popunjeno",
@@ -188,9 +192,15 @@ private fun WideIssuanceEditor(
                                 } else {
                                     FontWeight.Medium
                                 },
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             )
                             Text(
-                                text = equipmentSizes[equipment].orEmpty() + value,
+                                text = loanShown(
+                                    equipment,
+                                    equipmentSizes[equipment].orEmpty(),
+                                    value,
+                                ),
                                 style = MaterialTheme.typography.labelLarge,
                             )
                         }
@@ -212,10 +222,17 @@ private fun WideIssuanceEditor(
                 horizontalArrangement = Arrangement.spacedBy(24.dp),
             ) {
                 Column(modifier = Modifier.weight(0.7f)) {
+                    val typed = equipmentValues[selectedEquipment].orEmpty()
                     EquipmentCodeInput(
-                        value = equipmentSizes[selectedEquipment].orEmpty() +
-                            equipmentValues[selectedEquipment].orEmpty(),
+                        value = loanField(
+                            selectedEquipment,
+                            equipmentSizes[selectedEquipment].orEmpty(),
+                            typed,
+                        ),
                         onClear = { onClearEquipment(selectedEquipment) },
+                        clearEnabled = typed.isNotEmpty() ||
+                            equipmentSizes[selectedEquipment].orEmpty().isNotEmpty(),
+                        placeholder = if (selectedEquipment == LoanOlovo) "Količina" else "Oznaka opreme",
                     )
                 }
 
@@ -243,7 +260,9 @@ private fun WideIssuanceEditor(
             )
             Spacer(Modifier.height(10.dp))
             IssuanceActions(
-                enabled = equipmentValues.values.any { it.isNotBlank() },
+                enabled = loanEquipmentTypes.any {
+                    loanReady(it, equipmentSizes[it].orEmpty(), equipmentValues[it].orEmpty())
+                },
                 onIssue = onIssue,
             )
         }
@@ -282,7 +301,11 @@ private fun CompactIssuanceEditor(
             ) {
                 row.forEach { equipment ->
                     val isSelected = selectedEquipment == equipment
-                    val isComplete = equipmentValues[equipment].orEmpty().isNotBlank()
+                    val isComplete = loanReady(
+                        equipment,
+                        equipmentSizes[equipment].orEmpty(),
+                        equipmentValues[equipment].orEmpty(),
+                    )
                     Surface(
                         modifier = Modifier
                             .weight(1f)
@@ -340,6 +363,8 @@ private fun CompactIssuanceEditor(
                                 } else {
                                     FontWeight.Normal
                                 },
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                     }
@@ -348,10 +373,17 @@ private fun CompactIssuanceEditor(
         }
 
         Spacer(Modifier.height(20.dp))
+        val typed = equipmentValues[selectedEquipment].orEmpty()
         EquipmentCodeInput(
-            value = equipmentSizes[selectedEquipment].orEmpty() +
-                equipmentValues[selectedEquipment].orEmpty(),
+            value = loanField(
+                selectedEquipment,
+                equipmentSizes[selectedEquipment].orEmpty(),
+                typed,
+            ),
             onClear = { onClearEquipment(selectedEquipment) },
+            clearEnabled = typed.isNotEmpty() ||
+                equipmentSizes[selectedEquipment].orEmpty().isNotEmpty(),
+            placeholder = if (selectedEquipment == LoanOlovo) "Količina" else "Oznaka opreme",
         )
         Spacer(Modifier.height(32.dp))
         EquipmentSizeSelector(
@@ -372,7 +404,9 @@ private fun CompactIssuanceEditor(
         )
         Spacer(Modifier.height(10.dp))
         IssuanceActions(
-            enabled = equipmentValues.values.any { it.isNotBlank() },
+            enabled = loanEquipmentTypes.any {
+                loanReady(it, equipmentSizes[it].orEmpty(), equipmentValues[it].orEmpty())
+            },
             onIssue = onIssue,
         )
         Spacer(Modifier.height(16.dp))
@@ -413,6 +447,8 @@ private fun IssuanceActions(
 private fun EquipmentCodeInput(
     value: String,
     onClear: () -> Unit,
+    clearEnabled: Boolean,
+    placeholder: String,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -427,12 +463,12 @@ private fun EquipmentCodeInput(
                 .fillMaxWidth()
                 .height(64.dp),
             readOnly = true,
-            placeholder = { Text("Oznaka opreme") },
+            placeholder = { Text(placeholder) },
             textStyle = MaterialTheme.typography.headlineSmall.copy(
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = 4.sp,
             ),
-            trailingIcon = if (value.isNotEmpty()) {
+            trailingIcon = if (clearEnabled) {
                 {
                     IconButton(
                         onClick = onClear,
@@ -459,25 +495,38 @@ private fun EquipmentSizeSelector(
     selectedSize: String?,
     onSizeSelected: (String) -> Unit,
 ) {
-    val sizes = when (equipment) {
-        "Peraje" -> listOf("S", "R", "XL")
-        "Kompenzator" -> listOf("XS", "S", "M", "L", "XL", "XXL")
-        else -> emptyList()
+    if (equipment == "Regulator") {
+        ChoiceRow(
+            options = regulatorTypes.map { it.first to it.second },
+            selected = selectedSize,
+            onSelected = onSizeSelected,
+        )
+        return
     }
+    val sizes = inventorySizes(equipment).map { it to it }
 
-    if (sizes.isEmpty()) return
+    ChoiceRow(options = sizes, selected = selectedSize, onSelected = onSizeSelected)
+}
+
+@Composable
+private fun ChoiceRow(
+    options: List<Pair<String, String>>,
+    selected: String?,
+    onSelected: (String) -> Unit,
+) {
+    if (options.isEmpty()) return
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        sizes.forEach { size ->
-            val isSelected = size == selectedSize
+        options.forEach { (label, value) ->
+            val isSelected = value == selected
             Surface(
                 modifier = Modifier
                     .weight(1f)
                     .height(56.dp)
-                    .clickable { onSizeSelected(size) },
+                    .clickable { onSelected(value) },
                 color = if (isSelected) {
                     MaterialTheme.colorScheme.primary
                 } else {
@@ -492,8 +541,10 @@ private fun EquipmentSizeSelector(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
-                        text = size,
+                        text = label,
                         fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -601,7 +652,7 @@ private fun IssuanceSummary(
                         modifier = Modifier.weight(1f),
                     )
                     Text(
-                        text = "${equipmentValues.values.count { it.isNotBlank() }} / ${loanEquipmentTypes.size} popunjeno",
+                        text = "${loanEquipmentTypes.count { loanReady(it, equipmentSizes[it].orEmpty(), equipmentValues[it].orEmpty()) }} / ${loanEquipmentTypes.size} popunjeno",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -624,12 +675,11 @@ private fun IssuanceSummary(
                                         modifier = Modifier.weight(1f),
                                     )
                                     Text(
-                                        text = listOfNotNull(
-                                            equipmentSizes[equipment]
-                                                ?.takeIf { it.isNotBlank() },
-                                            equipmentValues[equipment]
-                                                ?.takeIf { it.isNotBlank() },
-                                        ).joinToString("").ifBlank { "—" },
+                                        text = loanShown(
+                                            equipment,
+                                            equipmentSizes[equipment].orEmpty(),
+                                            equipmentValues[equipment].orEmpty(),
+                                        ).ifBlank { "—" },
                                         fontWeight = FontWeight.SemiBold,
                                     )
                                 }
@@ -639,6 +689,9 @@ private fun IssuanceSummary(
                                     ),
                                 )
                             }
+                        }
+                        if (row.size == 1) {
+                            Spacer(Modifier.weight(1f))
                         }
                     }
                 }

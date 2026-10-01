@@ -8,11 +8,31 @@ import hr.gearmory.app.feature.equipment.pieceSize
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
 import java.nio.charset.CodingErrorAction
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
+import java.time.format.ResolverStyle
 
-internal const val CsvHeader = "Vrsta;Sifra;Velicina;Debljina;Stanje;Kolicina;Napomena"
+internal const val CsvHeader = "Vrsta;Sifra;Velicina;Debljina;Stanje;Kolicina;Napomena;Datum"
+private const val LegacyThicknessHeader = "Vrsta;Sifra;Velicina;Debljina;Stanje;Kolicina;Napomena"
 private const val LegacyNoteHeader = "Vrsta;Sifra;Velicina;Stanje;Kolicina;Napomena"
 private const val LegacyCsvHeader = "Vrsta;Sifra;Velicina;Stanje;Kolicina"
 internal val suitThicknesses = listOf("3mm", "5mm", "7mm")
+private val enteredOnFormat = DateTimeFormatter.ofPattern("dd.MM.uuuu")
+    .withResolverStyle(ResolverStyle.STRICT)
+
+internal fun todayEntered(): String = LocalDate.now().format(enteredOnFormat)
+
+internal fun enteredOnOk(raw: String): Boolean {
+    if (raw.isEmpty()) return true
+    if (raw.length != 10) return false
+    return try {
+        LocalDate.parse(raw, enteredOnFormat)
+        true
+    } catch (_: DateTimeParseException) {
+        false
+    }
+}
 internal const val CsvReadError = "Csv se ne da čitati."
 
 internal fun skippedRowsNotice(count: Int): String = "$count redaka maknuto. Ne daju se čitati."
@@ -175,6 +195,8 @@ internal fun encodeInventory(entries: List<InventoryEntry>): String = buildStrin
         append(entry.quantity)
         append(';')
         append(entry.note)
+        append(';')
+        append(entry.enteredOn)
         append("\r\n")
     }
 }
@@ -212,12 +234,14 @@ internal fun parseInventory(text: String): InventoryRead? {
     while (end > 0 && lines[end - 1].isBlank()) end--
     if (end == 0) return null
     val columns = when (lines[0]) {
-        CsvHeader -> 7
+        CsvHeader -> 8
+        LegacyThicknessHeader -> 7
         LegacyNoteHeader -> 6
         LegacyCsvHeader -> 5
         else -> return null
     }
-    val hasThickness = lines[0] == CsvHeader
+    val hasThickness = lines[0] == CsvHeader || lines[0] == LegacyThicknessHeader
+    val hasDate = lines[0] == CsvHeader
     val parsed = mutableListOf<InventoryEntry>()
     var dropped = 0
     for (index in 1 until end) {
@@ -226,7 +250,7 @@ internal fun parseInventory(text: String): InventoryRead? {
         val entry = if (fields == null || fields.size != columns) {
             null
         } else {
-            rowToEntry(fields.map { it.trim() }, index, hasThickness)
+            rowToEntry(fields.map { it.trim() }, index, hasThickness, hasDate)
         }
         if (entry == null || conflicts(parsed, entry)) {
             dropped++
@@ -237,7 +261,12 @@ internal fun parseInventory(text: String): InventoryRead? {
     return InventoryRead(parsed, dropped)
 }
 
-private fun rowToEntry(fields: List<String>, index: Int, hasThickness: Boolean): InventoryEntry? {
+private fun rowToEntry(
+    fields: List<String>,
+    index: Int,
+    hasThickness: Boolean,
+    hasDate: Boolean,
+): InventoryEntry? {
     val type = fromFileType(fields[0])
     val code = fields[1]
     val size = fields[2]
@@ -247,12 +276,16 @@ private fun rowToEntry(fields: List<String>, index: Int, hasThickness: Boolean):
     val condition = fields[3 + shift]
     val quantity = fields[4 + shift]
     val note = fields.getOrElse(5 + shift) { "" }
+    val enteredOn = if (hasDate) fields[6 + shift] else ""
+    if (!enteredOnOk(enteredOn)) return null
     return when {
-        type in equipmentTypes -> pieceEntry(type, code, size, condition, quantity, note, thickness, index)
-        type in quantityTypes -> quantityEntry(type, code, size, thickness, condition, quantity, note, false, index)
+        type in equipmentTypes ->
+            pieceEntry(type, code, size, condition, quantity, note, thickness, enteredOn, index)
+        type in quantityTypes ->
+            quantityEntry(type, code, size, thickness, condition, quantity, note, enteredOn, false, index)
         else -> {
             val name = raznoNameOk(type) ?: return null
-            quantityEntry(name, code, size, thickness, condition, quantity, note, true, index)
+            quantityEntry(name, code, size, thickness, condition, quantity, note, enteredOn, true, index)
         }
     }
 }
@@ -265,6 +298,7 @@ private fun pieceEntry(
     quantity: String,
     note: String,
     thickness: String,
+    enteredOn: String,
     index: Int,
 ): InventoryEntry? {
     if (!pieceCodeOk(type, code)) return null
@@ -281,7 +315,16 @@ private fun pieceEntry(
     } else {
         ""
     }
-    return InventoryEntry(index.toString(), type, code, condition, "", thickness = thickness, size = storedSize)
+    return InventoryEntry(
+        index.toString(),
+        type,
+        code,
+        condition,
+        "",
+        thickness = thickness,
+        size = storedSize,
+        enteredOn = enteredOn,
+    )
 }
 
 private fun quantityEntry(
@@ -292,6 +335,7 @@ private fun quantityEntry(
     condition: String,
     quantity: String,
     note: String,
+    enteredOn: String,
     allowNote: Boolean,
     index: Int,
 ): InventoryEntry? {
@@ -299,7 +343,7 @@ private fun quantityEntry(
     val count = normalizeQuantity(quantity) ?: return null
     val storedNote = if (allowNote) napomenaOk(note) else note
     if (!allowNote && storedNote.isNotEmpty()) return null
-    return InventoryEntry(index.toString(), type, "", "", count, storedNote)
+    return InventoryEntry(index.toString(), type, "", "", count, storedNote, enteredOn = enteredOn)
 }
 
 private fun conflicts(entries: List<InventoryEntry>, entry: InventoryEntry): Boolean = if (entry.isQuantity()) {

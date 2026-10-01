@@ -17,12 +17,23 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import hr.gearmory.app.BuildConfig
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -36,7 +47,11 @@ import androidx.compose.ui.unit.sp
 import hr.gearmory.app.R
 
 @Composable
-internal fun LoginScreen(onLogin: () -> Unit) {
+internal fun LoginScreen(
+    error: String?,
+    busy: Boolean,
+    onLogin: (String, String) -> Unit,
+) {
     val portrait =
         LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
 
@@ -58,6 +73,8 @@ internal fun LoginScreen(onLogin: () -> Unit) {
                 LoginBranding()
                 Spacer(Modifier.height(36.dp))
                 LoginCard(
+                    error = error,
+                    busy = busy,
                     onLogin = onLogin,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -75,6 +92,8 @@ internal fun LoginScreen(onLogin: () -> Unit) {
                 LoginBranding(modifier = Modifier.weight(1.15f))
                 Spacer(Modifier.width(48.dp))
                 LoginCard(
+                    error = error,
+                    busy = busy,
                     onLogin = onLogin,
                     modifier = Modifier
                         .weight(0.85f)
@@ -111,11 +130,18 @@ private fun LoginBranding(modifier: Modifier = Modifier) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LoginCard(
-    onLogin: () -> Unit,
+    error: String?,
+    busy: Boolean,
+    onLogin: (String, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var username by remember { mutableStateOf(if (BuildConfig.DEBUG) "demo" else "") }
+    var password by remember {
+        mutableStateOf(if (BuildConfig.DEBUG) "eJrBArXOcXZ6oNRBihVGu4Ur" else "")
+    }
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -133,13 +159,46 @@ private fun LoginCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(28.dp))
+            OutlinedTextField(
+                value = username,
+                onValueChange = { username = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                enabled = !busy,
+                label = { Text("Korisnik") },
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                enabled = !busy,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                label = { Text("Lozinka aplikacije") },
+            )
+            if (error != null) {
+                Spacer(Modifier.height(12.dp))
+                Text(text = error, color = MaterialTheme.colorScheme.error)
+            }
+            Spacer(Modifier.height(20.dp))
             Button(
-                onClick = onLogin,
+                onClick = { if (!busy) onLogin(username, password) },
+                enabled = busy || (username.isNotBlank() && password.isNotBlank()),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
             ) {
-                Text("Prijavi se")
+                if (busy) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Text("Prijavi se")
+                }
             }
         }
     }

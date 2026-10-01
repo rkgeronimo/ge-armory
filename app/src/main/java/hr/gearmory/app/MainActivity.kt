@@ -15,8 +15,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.compose.runtime.remember
 import hr.gearmory.app.feature.inventory.InventoryFileStore
 import hr.gearmory.app.feature.login.LoginScreen
+import hr.gearmory.app.remote.StaffSession
 import hr.gearmory.app.ui.shell.AppShell
 import hr.gearmory.app.ui.theme.GeArmoryTheme
 
@@ -57,17 +59,33 @@ private fun ArmoryApp(
     darkTheme: Boolean,
     onToggleTheme: () -> Unit,
 ) {
-    var isLoggedIn by rememberSaveable { mutableStateOf(false) }
+    var isLoggedIn by remember { mutableStateOf(false) }
+    var loginError by remember { mutableStateOf<String?>(null) }
+    var loginBusy by remember { mutableStateOf(false) }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         if (isLoggedIn) {
             AppShell(
                 darkTheme = darkTheme,
                 onToggleTheme = onToggleTheme,
-                onLogout = { isLoggedIn = false },
+                onLogout = {
+                    StaffSession.signOut()
+                    isLoggedIn = false
+                },
             )
         } else {
-            LoginScreen(onLogin = { isLoggedIn = true })
+            LoginScreen(
+                error = loginError,
+                busy = loginBusy,
+                onLogin = { username, password ->
+                    loginBusy = true
+                    loginError = null
+                    StaffSession.signIn(username, password) { error ->
+                        loginBusy = false
+                        if (error == null) isLoggedIn = true else loginError = error
+                    }
+                },
+            )
         }
     }
 }

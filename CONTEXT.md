@@ -53,8 +53,12 @@ Predaja komada jednom članu. Select nudi samo članove koji su zatražili oprem
 _Avoid_: posudba
 
 **Razduživanje**:
-Povrat komada koji član drži. Vraćeni komad je Na stanju.
+Zatvaranje traženog komada koji ima šifru. Komad se vraća na stanje ili je izgubljen.
 _Avoid_: check-in, odjava
+
+**Izgubljeno**:
+Komad koji se s izleta ne vraća.
+_Avoid_: otpis, za otpis
 
 **Inventura**:
 Unos opreme koja se broji. Neke vrste zbrajaju količinu, neke dodaju redak. Popis stoji na tabletu.
@@ -77,7 +81,7 @@ Tekst uz razno. Ostale vrste je nemaju.
 _Avoid_: komentar, bilješka
 
 **Pojas**:
-Pojas za utege.
+Pojas za utege. Uz olovo na zahtjevu se ne ispisuje. Podrazumijeva se.
 _Avoid_: pojasevi
 
 **Maska**:
@@ -103,7 +107,7 @@ Osoba na izletu. Na početnoj se vidi samo broj.
 _Avoid_: korisnik
 
 **Zahtjev za opremom**:
-Tražena oprema za izlet. Na početnoj se vidi samo broj zahtjeva.
+Tražena oprema jednog člana. Na popisu piše ime člana i ime izleta. Može postojati i bez izleta. Tada piše samo ime člana.
 _Avoid_: narudžba, rezervacija
 
 **Olovo 1kg**:

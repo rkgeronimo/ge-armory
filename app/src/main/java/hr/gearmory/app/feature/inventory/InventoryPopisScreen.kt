@@ -431,6 +431,18 @@ private fun PopisEdit(
                 }
             }
         }
+        Spacer(Modifier.height(20.dp))
+        Text(
+            text = "Datum unosa",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = entry.enteredOn.ifBlank { "—" },
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Spacer(Modifier.height(28.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(

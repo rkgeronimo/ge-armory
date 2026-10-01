@@ -18,184 +18,138 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowDropDown
-import androidx.compose.material.icons.rounded.PersonSearch
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun IssuanceScreen() {
-    var memberQuery by rememberSaveable { mutableStateOf("") }
-    var selectedMember by rememberSaveable { mutableStateOf<String?>(null) }
-    var memberMenuExpanded by remember { mutableStateOf(false) }
+    var pickedMember by rememberSaveable { mutableStateOf<String?>(null) }
+    var opened by rememberSaveable { mutableStateOf(false) }
     var selectedEquipment by rememberSaveable { mutableStateOf(loanEquipmentTypes.first()) }
     var showConfirmation by rememberSaveable { mutableStateOf(false) }
     val issuanceViewModel: IssuanceViewModel = viewModel()
-    val focusManager = LocalFocusManager.current
-    val memberListScrollState = rememberScrollState()
     val equipmentValues = issuanceViewModel.equipmentValues
     val equipmentSizes = issuanceViewModel.equipmentSizes
-    val filteredMembers = dummyMembers.filter {
-        it.contains(memberQuery, ignoreCase = true)
-    }
+    val selectedMember = pickedMember
     val cancelIssuance = {
         issuanceViewModel.clearAll()
-        memberQuery = ""
-        selectedMember = null
+        pickedMember = null
+        opened = false
         selectedEquipment = loanEquipmentTypes.first()
-        memberMenuExpanded = false
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 1.dp,
-        ) {
-            Box(
+        if (!opened || selectedMember == null) {
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .weight(1f)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-            Row(
-                modifier = Modifier
-                    .widthIn(max = 612.dp)
-                    .fillMaxWidth()
-                    .align(Alignment.TopCenter),
-                verticalAlignment = Alignment.Top,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        shadowElevation = 1.dp,
-                        color = MaterialTheme.colorScheme.surface,
-                    ) {
-                        OutlinedTextField(
-                            value = memberQuery,
-                            onValueChange = {
-                                memberQuery = it
-                                selectedMember = dummyMembers.firstOrNull { member ->
-                                    member.equals(it, ignoreCase = true)
-                                }
-                                memberMenuExpanded = true
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                            placeholder = { Text("Odaberi ili pretraži člana") },
-                            leadingIcon = {
-                                Icon(Icons.Rounded.PersonSearch, contentDescription = null)
-                            },
-                            trailingIcon = {
-                                IconButton(
-                                    onClick = { memberMenuExpanded = !memberMenuExpanded },
+                IconButton(
+                    onClick = { },
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .padding(end = 8.dp)
+                        .size(56.dp),
+                ) {
+                    Icon(
+                        Icons.Rounded.Refresh,
+                        contentDescription = "Osvježi",
+                    )
+                }
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .widthIn(max = 720.dp)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                ) {
+                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                        dummyMembers.forEachIndexed { index, member ->
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 64.dp)
+                                    .clickable { pickedMember = member },
+                                color = if (member == pickedMember) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surface
+                                },
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    contentAlignment = Alignment.Center,
                                 ) {
-                                    Icon(
-                                        Icons.Rounded.ArrowDropDown,
-                                        contentDescription = "Otvori popis članova",
+                                    Text(
+                                        text = member,
+                                        fontWeight = FontWeight.Medium,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
                                     )
                                 }
-                            },
-                            shape = RoundedCornerShape(16.dp),
-                            singleLine = true,
-                        )
-                    }
-                    if (memberMenuExpanded) {
-                        Spacer(Modifier.height(6.dp))
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 224.dp),
-                            shape = RoundedCornerShape(18.dp),
-                            color = MaterialTheme.colorScheme.surface,
-                            shadowElevation = 3.dp,
-                            border = BorderStroke(
-                                1.dp,
-                                MaterialTheme.colorScheme.outlineVariant,
-                            ),
-                        ) {
-                            Column(
-                                modifier = Modifier.verticalScroll(memberListScrollState),
-                            ) {
-                                if (filteredMembers.isEmpty()) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(56.dp),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Text(
-                                            text = "Nema pronađenih članova",
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                } else {
-                                    filteredMembers.forEachIndexed { index, member ->
-                                        Surface(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(56.dp)
-                                                .clickable {
-                                                    memberQuery = member
-                                                    selectedMember = member
-                                                    memberMenuExpanded = false
-                                                    focusManager.clearFocus()
-                                                },
-                                            color = if (member == selectedMember) {
-                                                MaterialTheme.colorScheme.primaryContainer
-                                            } else {
-                                                MaterialTheme.colorScheme.surface
-                                            },
-                                        ) {
-                                            Box(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                contentAlignment = Alignment.Center,
-                                            ) {
-                                                Text(
-                                                    text = member,
-                                                    fontWeight = FontWeight.Medium,
-                                                )
-                                            }
-                                        }
-                                        if (index < filteredMembers.lastIndex) {
-                                            HorizontalDivider(
-                                                color = MaterialTheme.colorScheme.outlineVariant,
-                                            )
-                                        }
-                                    }
-                                }
+                            }
+                            if (index < dummyMembers.lastIndex) {
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                             }
                         }
                     }
                 }
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = { opened = true },
+                    enabled = selectedMember != null,
+                    modifier = Modifier
+                        .widthIn(max = 720.dp)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 16.dp)
+                        .height(56.dp),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Text("Zaduživanje", fontWeight = FontWeight.SemiBold)
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .widthIn(max = 720.dp)
+                    .fillMaxWidth()
+                    .align(Alignment.CenterHorizontally)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
                 Button(
                     onClick = cancelIssuance,
-                    enabled = selectedMember != null ||
-                        equipmentValues.values.any { it.isNotBlank() },
                     modifier = Modifier
                         .width(120.dp)
                         .height(56.dp),
@@ -209,31 +163,6 @@ internal fun IssuanceScreen() {
                     Text("Odustani")
                 }
             }
-            }
-        }
-        HorizontalDivider()
-
-        if (selectedMember == null) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Rounded.PersonSearch,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(64.dp),
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    Text(
-                        text = "Prvo odaberite člana",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-            }
-        } else {
             IssuanceEditor(
                 selectedEquipment = selectedEquipment,
                 onEquipmentSelected = { selectedEquipment = it },
