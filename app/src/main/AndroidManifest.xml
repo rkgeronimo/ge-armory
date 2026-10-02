@@ -19,6 +19,7 @@
         android:theme="@style/Theme.GeArmory">
         <activity
             android:name=".MainActivity"
+            android:colorMode="default"
             android:exported="true"
             android:screenOrientation="fullSensor">
             <intent-filter>

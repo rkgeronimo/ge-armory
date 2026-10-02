@@ -1,6 +1,5 @@
 package hr.gearmory.app.feature.equipment
 
-import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -45,7 +44,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -61,8 +59,6 @@ internal fun EquipmentScreen() {
     var typeFilter by rememberSaveable { mutableStateOf("Sve") }
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
     val editing = viewModel.pieces.firstOrNull { it.id == editingId }
-    val isPortrait =
-        LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
     val checkedIds = viewModel.checkedIds
     val visible = viewModel.pieces.filter { piece ->
         val statusOk = statusFilter == "Sve" || piece.status == statusFilter
@@ -156,23 +152,6 @@ internal fun EquipmentScreen() {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-        } else if (isPortrait) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                visible.forEach { piece ->
-                    PieceCard(
-                        piece = piece,
-                        checked = piece.id in checkedIds,
-                        onToggle = { viewModel.toggleChecked(piece.id) },
-                        onOpen = { editingId = piece.id },
-                    )
-                }
-            }
         } else {
             PieceTable(
                 pieces = visible,
@@ -221,67 +200,6 @@ private fun FilterChip(
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp),
     ) {
         Text(label)
-    }
-}
-
-@Composable
-private fun PieceCard(
-    piece: Piece,
-    checked: Boolean,
-    onToggle: () -> Unit,
-    onOpen: () -> Unit,
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 96.dp)
-            .clickable(onClick = onOpen),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-    ) {
-        Row(
-            modifier = Modifier.padding(end = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            CircleCheck(checked = checked, onToggle = onToggle)
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        FieldLabel("Šifra")
-                        Spacer(Modifier.width(6.dp))
-                        FieldValue(piece.code)
-                    }
-                    Box(
-                        modifier = Modifier.weight(1f),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        FieldValue(piece.type)
-                    }
-                    Box(
-                        modifier = Modifier.weight(1f),
-                        contentAlignment = Alignment.CenterEnd,
-                    ) {
-                        StatusPill(piece.status)
-                    }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    FieldLabel("Veličina")
-                    Spacer(Modifier.width(6.dp))
-                    FieldValue(piece.size.ifBlank { pieceSize(piece.type, piece.code) }.ifBlank { "—" })
-                }
-                if (piece.status == StatusIssuedLabel) {
-                    FieldValue(listOfNotNull(piece.holder, piece.issuedOn).joinToString("  "))
-                }
-            }
-        }
     }
 }
 
@@ -371,29 +289,6 @@ private fun TableRow(
         Text(holder, modifier = Modifier.weight(1.3f), fontWeight = if (header) FontWeight.SemiBold else FontWeight.Normal)
         Text(issuedOn, modifier = Modifier.weight(1.2f), fontWeight = if (header) FontWeight.SemiBold else FontWeight.Normal)
     }
-}
-
-@Composable
-private fun FieldLabel(text: String) {
-    Text(
-        text = text,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.bodyLarge,
-    )
-}
-
-@Composable
-private fun FieldValue(
-    text: String,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        text = text,
-        modifier = modifier,
-        color = MaterialTheme.colorScheme.onSurface,
-        style = MaterialTheme.typography.bodyLarge,
-        fontWeight = FontWeight.Medium,
-    )
 }
 
 @Composable

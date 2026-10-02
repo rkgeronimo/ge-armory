@@ -19,6 +19,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -53,7 +54,10 @@ internal fun EquipmentForm(
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(Modifier.height(8.dp))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             equipmentTypes.forEach { option ->
                 ChoiceChip(
                     label = option,
@@ -76,6 +80,12 @@ internal fun EquipmentForm(
                 .fillMaxWidth()
                 .height(56.dp),
             singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                disabledContainerColor = MaterialTheme.colorScheme.surface,
+            ),
         )
         Spacer(Modifier.height(20.dp))
         Text(
@@ -84,7 +94,10 @@ internal fun EquipmentForm(
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(Modifier.height(8.dp))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             pieceConditions.forEach { option ->
                 ChoiceChip(
                     label = option,
@@ -115,6 +128,10 @@ internal fun EquipmentForm(
                     .weight(1f)
                     .height(56.dp),
                 shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    disabledContainerColor = MaterialTheme.colorScheme.surface,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
             ) {
                 Text("Spremi", fontWeight = FontWeight.SemiBold)
             }
@@ -136,7 +153,7 @@ private fun ChoiceChip(
             containerColor = if (selected) {
                 MaterialTheme.colorScheme.primary
             } else {
-                MaterialTheme.colorScheme.surfaceVariant
+                MaterialTheme.colorScheme.surface
             },
             contentColor = if (selected) {
                 MaterialTheme.colorScheme.onPrimary
@@ -144,7 +161,7 @@ private fun ChoiceChip(
                 MaterialTheme.colorScheme.onSurface
             },
         ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp),
     ) {
         Text(label)
     }

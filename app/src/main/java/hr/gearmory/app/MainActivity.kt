@@ -1,5 +1,7 @@
 package hr.gearmory.app
 
+import android.content.pm.ActivityInfo
+import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -31,6 +33,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.setFormat(PixelFormat.RGBA_8888)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            window.colorMode = ActivityInfo.COLOR_MODE_DEFAULT
+        }
         if (Build.VERSION.SDK_INT < 29 &&
             ContextCompat.checkSelfPermission(
                 this,
@@ -59,7 +65,7 @@ private fun ArmoryApp(
     darkTheme: Boolean,
     onToggleTheme: () -> Unit,
 ) {
-    var isLoggedIn by remember { mutableStateOf(false) }
+    var isLoggedIn by rememberSaveable { mutableStateOf(false) }
     var loginError by remember { mutableStateOf<String?>(null) }
     var loginBusy by remember { mutableStateOf(false) }
 

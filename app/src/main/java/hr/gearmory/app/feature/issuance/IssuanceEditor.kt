@@ -120,7 +120,7 @@ private fun WideIssuanceEditor(
             modifier = Modifier
                 .width(320.dp)
                 .fillMaxHeight(),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+            color = MaterialTheme.colorScheme.surface,
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
                 Text(
@@ -131,99 +131,14 @@ private fun WideIssuanceEditor(
                     modifier = Modifier.padding(10.dp),
                 )
                 loanEquipmentTypes.forEach { equipment ->
-                    val isSelected = equipment == selectedEquipment
-                    val value = equipmentValues[equipment].orEmpty()
-                    val filled = loanReady(equipment, equipmentSizes[equipment].orEmpty(), value)
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 3.dp)
-                            .height(56.dp)
-                            .clickable { onEquipmentSelected(equipment) },
-                        color = if (isSelected) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            Color.Transparent
-                        },
-                        contentColor = if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .background(
-                                        color = if (filled) {
-                                            if (isSelected) {
-                                                Color.White.copy(alpha = 0.18f)
-                                            } else {
-                                                MaterialTheme.colorScheme.primaryContainer
-                                            }
-                                        } else {
-                                            Color.Transparent
-                                        },
-                                        shape = MaterialTheme.shapes.extraLarge,
-                                    )
-                                    .border(
-                                        border = BorderStroke(
-                                            width = 1.dp,
-                                            color = if (!filled) {
-                                                if (isSelected) {
-                                                    Color.White.copy(alpha = 0.75f)
-                                                } else {
-                                                    MaterialTheme.colorScheme.outline
-                                                }
-                                            } else {
-                                                Color.Transparent
-                                            },
-                                        ),
-                                        shape = MaterialTheme.shapes.extraLarge,
-                                    ),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                if (filled) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Check,
-                                        contentDescription = "Popunjeno",
-                                        tint = if (isSelected) {
-                                            MaterialTheme.colorScheme.onPrimary
-                                        } else {
-                                            MaterialTheme.colorScheme.primary
-                                        },
-                                        modifier = Modifier.size(18.dp),
-                                    )
-                                }
-                            }
-                            Spacer(Modifier.width(10.dp))
-                            Text(
-                                text = equipment,
-                                modifier = Modifier.weight(1f),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = if (isSelected) {
-                                    FontWeight.SemiBold
-                                } else {
-                                    FontWeight.Medium
-                                },
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Text(
-                                text = loanShown(
-                                    equipment,
-                                    equipmentSizes[equipment].orEmpty(),
-                                    value,
-                                ),
-                                style = MaterialTheme.typography.labelLarge,
-                            )
-                        }
-                    }
+                    EquipmentChoice(
+                        equipment = equipment,
+                        selected = equipment == selectedEquipment,
+                        value = equipmentValues[equipment].orEmpty(),
+                        size = equipmentSizes[equipment].orEmpty(),
+                        wanted = requested[equipment] != "—",
+                        onClick = { onEquipmentSelected(equipment) },
+                    )
                 }
                 Spacer(Modifier.weight(1f))
             }
@@ -320,98 +235,43 @@ private fun CompactIssuanceEditor(
                 .weight(1f)
                 .verticalScroll(rememberScrollState()),
         ) {
-        Text(
-            text = "OPREMA",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(Modifier.height(8.dp))
-        loanEquipmentTypes.chunked(3).forEach { row ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                row.forEach { equipment ->
-                    val isSelected = selectedEquipment == equipment
-                    val isComplete = loanReady(
-                        equipment,
-                        equipmentSizes[equipment].orEmpty(),
-                        equipmentValues[equipment].orEmpty(),
-                    )
-                    Surface(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(56.dp)
-                            .clickable { onEquipmentSelected(equipment) },
-                        color = if (isSelected) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.surface
-                        },
-                        contentColor = if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        },
-                        shadowElevation = 1.dp,
-                        shape = RoundedCornerShape(12.dp),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center,
-                        ) {
-                            if (isComplete) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .background(
-                                            color = if (isSelected) {
-                                                Color.White.copy(alpha = 0.2f)
-                                            } else {
-                                                MaterialTheme.colorScheme.primaryContainer
-                                            },
-                                            shape = MaterialTheme.shapes.extraLarge,
-                                        ),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.Check,
-                                        contentDescription = "Popunjeno",
-                                        tint = if (isSelected) {
-                                            Color.White
-                                        } else {
-                                            MaterialTheme.colorScheme.onPrimaryContainer
-                                        },
-                                        modifier = Modifier.size(16.dp),
-                                    )
-                                }
-                                Spacer(Modifier.width(6.dp))
-                            }
-                            Text(
-                                text = equipment,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = if (isSelected) {
-                                    FontWeight.SemiBold
-                                } else {
-                                    FontWeight.Normal
-                                },
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(12.dp),
+            shadowElevation = 1.dp,
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+                Text(
+                    text = "OPREMA",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                )
+                loanEquipmentTypes.chunked(3).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        row.forEach { equipment ->
+                            EquipmentChoice(
+                                equipment = equipment,
+                                selected = equipment == selectedEquipment,
+                                value = equipmentValues[equipment].orEmpty(),
+                                size = equipmentSizes[equipment].orEmpty(),
+                                wanted = requested[equipment] != "—",
+                                compact = true,
+                                onClick = { onEquipmentSelected(equipment) },
+                                modifier = Modifier.weight(1f),
                             )
                         }
+                        repeat(3 - row.size) {
+                            Spacer(Modifier.weight(1f))
+                        }
                     }
-                }
-                repeat(3 - row.size) {
-                    Spacer(Modifier.weight(1f))
                 }
             }
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(12.dp))
         val typed = equipmentValues[selectedEquipment].orEmpty()
         EquipmentCodeInput(
             value = loanField(
@@ -557,6 +417,136 @@ private fun EquipmentCodeInput(
             shape = RoundedCornerShape(16.dp),
             singleLine = true,
         )
+    }
+}
+
+private val FilledEquipment = Color(0xFF1B7F4E)
+
+@Composable
+private fun EquipmentChoice(
+    equipment: String,
+    selected: Boolean,
+    value: String,
+    size: String,
+    onClick: () -> Unit,
+    wanted: Boolean = false,
+    compact: Boolean = false,
+    modifier: Modifier = Modifier,
+) {
+    val filled = loanReady(equipment, size, value)
+    val container = when {
+        filled -> FilledEquipment
+        selected -> MaterialTheme.colorScheme.primary
+        wanted -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.surface
+    }
+    val content = when {
+        filled -> Color.White
+        selected -> MaterialTheme.colorScheme.onPrimary
+        wanted -> MaterialTheme.colorScheme.onPrimaryContainer
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp)
+            .height(if (compact) 48.dp else 56.dp)
+            .clickable(onClick = onClick),
+        color = container,
+        contentColor = content,
+        border = if (!filled && !wanted && !selected) {
+            BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        } else {
+            null
+        },
+        shape = RoundedCornerShape(12.dp),
+    ) {
+        if (compact) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 6.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = equipment,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            return@Surface
+        }
+        Row(
+            modifier = Modifier.padding(horizontal = if (compact) 8.dp else 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(if (compact) 20.dp else 28.dp)
+                    .background(
+                        color = if (filled) {
+                            Color.White.copy(alpha = 0.22f)
+                        } else {
+                            Color.Transparent
+                        },
+                        shape = MaterialTheme.shapes.extraLarge,
+                    )
+                    .border(
+                        border = BorderStroke(
+                            width = 1.dp,
+                            color = if (!filled) {
+                                if (selected) {
+                                    Color.White.copy(alpha = 0.75f)
+                                } else {
+                                    MaterialTheme.colorScheme.outline
+                                }
+                            } else {
+                                Color.Transparent
+                            },
+                        ),
+                        shape = MaterialTheme.shapes.extraLarge,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (filled) {
+                    Icon(
+                        imageVector = Icons.Rounded.Check,
+                        contentDescription = "Popunjeno",
+                        tint = if (filled || selected) {
+                            Color.White
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
+                        modifier = Modifier.size(if (compact) 14.dp else 18.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.width(if (compact) 6.dp else 10.dp))
+            Text(
+                text = equipment,
+                modifier = Modifier.weight(1f),
+                style = if (compact) {
+                    MaterialTheme.typography.labelLarge
+                } else {
+                    MaterialTheme.typography.bodyLarge
+                },
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = loanShown(equipment, size, value),
+                style = if (compact) {
+                    MaterialTheme.typography.labelMedium
+                } else {
+                    MaterialTheme.typography.labelLarge
+                },
+                maxLines = 1,
+            )
+        }
     }
 }
 
