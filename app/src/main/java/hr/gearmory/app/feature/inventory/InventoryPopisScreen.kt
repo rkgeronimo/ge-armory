@@ -32,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -261,6 +262,12 @@ private fun PopisEdit(
     var quantity by rememberSaveable(entry.id) { mutableStateOf(entry.quantity) }
     var note by rememberSaveable(entry.id) { mutableStateOf(entry.note) }
     val razno = entry.isQuantity() && entry.type !in quantityTypes
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedContainerColor = MaterialTheme.colorScheme.surface,
+        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+        disabledContainerColor = MaterialTheme.colorScheme.surface,
+    )
+    val fieldShape = RoundedCornerShape(12.dp)
 
     Column(
         modifier = Modifier
@@ -282,6 +289,8 @@ private fun PopisEdit(
                     .fillMaxWidth()
                     .height(56.dp),
                 singleLine = true,
+                shape = fieldShape,
+                colors = fieldColors,
             )
             Spacer(Modifier.height(20.dp))
         }
@@ -299,6 +308,8 @@ private fun PopisEdit(
                     .fillMaxWidth()
                     .height(56.dp),
                 singleLine = true,
+                shape = fieldShape,
+                colors = fieldColors,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             )
             if (razno) {
@@ -316,6 +327,8 @@ private fun PopisEdit(
                         .fillMaxWidth()
                         .height(56.dp),
                     singleLine = true,
+                    shape = fieldShape,
+                    colors = fieldColors,
                 )
             }
         } else {
@@ -332,6 +345,8 @@ private fun PopisEdit(
                     .fillMaxWidth()
                     .height(56.dp),
                 singleLine = true,
+                shape = fieldShape,
+                colors = fieldColors,
             )
             if (entry.type == "Kompenzator") {
                 Spacer(Modifier.height(20.dp))

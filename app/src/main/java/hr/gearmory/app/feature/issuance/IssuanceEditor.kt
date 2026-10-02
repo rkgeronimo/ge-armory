@@ -37,6 +37,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
@@ -51,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import hr.gearmory.app.feature.equipment.typeTabLabel
 import hr.gearmory.app.feature.inventory.inventorySizes
 import hr.gearmory.app.feature.inventory.regulatorTypes
 
@@ -120,7 +122,7 @@ private fun WideIssuanceEditor(
             modifier = Modifier
                 .width(320.dp)
                 .fillMaxHeight(),
-            color = MaterialTheme.colorScheme.surface,
+            color = MaterialTheme.colorScheme.surfaceVariant,
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
                 Text(
@@ -235,38 +237,29 @@ private fun CompactIssuanceEditor(
                 .weight(1f)
                 .verticalScroll(rememberScrollState()),
         ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.surface,
-            shape = RoundedCornerShape(12.dp),
-            shadowElevation = 1.dp,
-        ) {
-            Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
-                Text(
-                    text = "OPREMA",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                )
-                loanEquipmentTypes.chunked(3).forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        row.forEach { equipment ->
-                            EquipmentChoice(
-                                equipment = equipment,
-                                selected = equipment == selectedEquipment,
-                                value = equipmentValues[equipment].orEmpty(),
-                                size = equipmentSizes[equipment].orEmpty(),
-                                wanted = requested[equipment] != "—",
-                                compact = true,
-                                onClick = { onEquipmentSelected(equipment) },
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                        repeat(3 - row.size) {
-                            Spacer(Modifier.weight(1f))
-                        }
-                    }
+        Text(
+            text = "OPREMA",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+        )
+        loanEquipmentTypes.chunked(3).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                row.forEach { equipment ->
+                    EquipmentChoice(
+                        equipment = equipment,
+                        selected = equipment == selectedEquipment,
+                        value = equipmentValues[equipment].orEmpty(),
+                        size = equipmentSizes[equipment].orEmpty(),
+                        wanted = requested[equipment] != "—",
+                        compact = true,
+                        onClick = { onEquipmentSelected(equipment) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                repeat(3 - row.size) {
+                    Spacer(Modifier.weight(1f))
                 }
             }
         }
@@ -416,11 +409,17 @@ private fun EquipmentCodeInput(
             },
             shape = RoundedCornerShape(16.dp),
             singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                disabledContainerColor = MaterialTheme.colorScheme.surface,
+            ),
         )
     }
 }
 
 private val FilledEquipment = Color(0xFF1B7F4E)
+private val WantedEquipment = Color(0xFFFFF3C4)
 
 @Composable
 private fun EquipmentChoice(
@@ -437,13 +436,13 @@ private fun EquipmentChoice(
     val container = when {
         filled -> FilledEquipment
         selected -> MaterialTheme.colorScheme.primary
-        wanted -> MaterialTheme.colorScheme.primaryContainer
+        wanted -> WantedEquipment
         else -> MaterialTheme.colorScheme.surface
     }
     val content = when {
         filled -> Color.White
         selected -> MaterialTheme.colorScheme.onPrimary
-        wanted -> MaterialTheme.colorScheme.onPrimaryContainer
+        wanted -> MaterialTheme.colorScheme.onSurface
         else -> MaterialTheme.colorScheme.onSurface
     }
     Surface(
@@ -454,7 +453,7 @@ private fun EquipmentChoice(
             .clickable(onClick = onClick),
         color = container,
         contentColor = content,
-        border = if (!filled && !wanted && !selected) {
+        border = if (!filled && !selected) {
             BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
         } else {
             null
@@ -469,7 +468,7 @@ private fun EquipmentChoice(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = equipment,
+                    text = typeTabLabel(equipment),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center,
@@ -526,7 +525,7 @@ private fun EquipmentChoice(
             }
             Spacer(Modifier.width(if (compact) 6.dp else 10.dp))
             Text(
-                text = equipment,
+                text = typeTabLabel(equipment),
                 modifier = Modifier.weight(1f),
                 style = if (compact) {
                     MaterialTheme.typography.labelLarge

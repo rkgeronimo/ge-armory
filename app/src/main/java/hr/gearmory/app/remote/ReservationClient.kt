@@ -1,5 +1,6 @@
 package hr.gearmory.app.remote
 
+import android.net.Uri
 import android.os.Build
 import android.util.Base64
 import hr.gearmory.app.BuildConfig
@@ -106,10 +107,51 @@ internal fun pieceMark(key: String, piece: ReservedPiece): String =
 internal fun pieceSize(key: String, piece: ReservedPiece): String? =
     if (key == "lead") null else piece.size?.takeIf { it.isNotBlank() }
 
+internal data class InventoryPiece(
+    val id: String,
+    val type: String,
+    val typeLabel: String,
+    val size: String,
+    val state: Int,
+    val status: String,
+    val userName: String?,
+    val issueDate: String?,
+    val note: String?,
+)
+
 internal object ReservationClient {
     fun listActive(credentials: StaffCredentials): List<Reservation> = list(credentials, 1)
 
     fun listPending(credentials: StaffCredentials): List<Reservation> = list(credentials, 0)
+
+    fun listInventory(credentials: StaffCredentials): List<InventoryPiece> {
+        val body = call(credentials, "GET", "/inventory", null)
+        val array = JSONArray(body)
+        return List(array.length()) { index -> parseInventory(array.getJSONObject(index)) }
+    }
+
+    fun updateInventory(
+        credentials: StaffCredentials,
+        id: String,
+        type: String?,
+        size: String?,
+        state: Int?,
+        note: String?,
+    ): InventoryPiece {
+        val body = JSONObject()
+        if (type != null) body.put("type", type)
+        if (size != null) body.put("size", size)
+        if (state != null) body.put("state", state)
+        if (note != null) body.put("note", note)
+        if (body.length() == 0) throw ReservationException(400, null)
+        val text = call(
+            credentials,
+            "POST",
+            "/inventory/${Uri.encode(id)}",
+            body.toString(),
+        )
+        return parseInventory(JSONObject(text))
+    }
 
     private fun list(credentials: StaffCredentials, state: Int): List<Reservation> {
         val body = call(credentials, "GET", "/reservations?state=$state", null)
@@ -229,6 +271,18 @@ internal object ReservationClient {
             equipment = equipment,
         )
     }
+
+    private fun parseInventory(json: JSONObject): InventoryPiece = InventoryPiece(
+        id = json.optString("id"),
+        type = json.optString("type"),
+        typeLabel = json.optString("type_label"),
+        size = json.optString("size"),
+        state = json.optInt("state"),
+        status = json.optString("status"),
+        userName = json.optNullableString("user_name"),
+        issueDate = json.optNullableString("issue_date"),
+        note = json.optNullableString("note"),
+    )
 }
 
 private fun JSONObject.optNullableString(name: String): String? {

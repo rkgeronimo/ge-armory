@@ -20,16 +20,20 @@ internal class ReturnsViewModel : ViewModel() {
     var saving by mutableStateOf(false)
 
     fun reload() {
-        loading = true
+        if (reservations.isEmpty()) {
+            StaffSession.cachedActive?.let { reservations.addAll(it) }
+        }
+        loading = reservations.isEmpty()
         notice = null
         StaffSession.request(ReservationClient::listActive) { result ->
             loading = false
             result.fold(
                 onSuccess = { loaded ->
+                    StaffSession.rememberActive(loaded)
                     reservations.clear()
                     reservations.addAll(loaded)
                 },
-                onFailure = { notice = reservationNotice(it) },
+                onFailure = { if (reservations.isEmpty()) notice = reservationNotice(it) },
             )
         }
     }
@@ -58,6 +62,7 @@ internal class ReturnsViewModel : ViewModel() {
                 onSuccess = { updated ->
                     val index = reservations.indexOfFirst { it.id == updated.id }
                     if (index >= 0) reservations[index] = updated
+                    StaffSession.rememberActive(reservations.toList())
                     changes.keys.forEach { marks.remove("$reservationId:$it") }
                     onDone(updated.openPieces().isNotEmpty())
                 },

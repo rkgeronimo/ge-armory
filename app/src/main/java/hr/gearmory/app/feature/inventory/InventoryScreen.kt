@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.foundation.text.KeyboardOptions
@@ -56,12 +56,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import hr.gearmory.app.feature.equipment.codeLetter
+import hr.gearmory.app.feature.equipment.typeTabLabel
 import hr.gearmory.app.feature.equipment.typedNumberLimit
 import hr.gearmory.app.feature.equipment.equipmentTypes
+import hr.gearmory.app.ui.SegmentedTabs
 import hr.gearmory.app.feature.equipment.pieceConditions
 import hr.gearmory.app.feature.equipment.pieceSize
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun InventoryScreen(viewModel: InventoryViewModel = viewModel()) {
     var type by rememberSaveable { mutableStateOf(equipmentTypes.first()) }
@@ -260,25 +261,16 @@ internal fun InventoryScreen(viewModel: InventoryViewModel = viewModel()) {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TypeChips(
     type: String,
     onType: (String) -> Unit,
 ) {
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        inventoryChips.forEach { option ->
-            SelectChip(
-                label = option,
-                selected = option == type,
-                onClick = { onType(option) },
-            )
-        }
-    }
+    SegmentedTabs(
+        options = inventoryChips.map { it to typeTabLabel(it) },
+        selected = type,
+        onSelect = onType,
+    )
 }
 
 @Composable
@@ -424,25 +416,40 @@ private fun ColumnScope.InventoryEditor(
 }
 
 @Composable
+private fun inventoryFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedContainerColor = MaterialTheme.colorScheme.surface,
+    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+    disabledContainerColor = MaterialTheme.colorScheme.surface,
+)
+
+@Composable
 private fun QuantityFields(
     rows: Map<String, String>,
     onDraft: (String, String) -> Unit,
     onEnter: () -> Unit,
 ) {
     val ready = quantityTypes.any { normalizeQuantity(rows[it].orEmpty()) != null }
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         quantityTypes.forEach { kind ->
             val value = rows[kind].orEmpty()
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .widthIn(max = 520.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
                     text = kind,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.width(120.dp),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
+                    maxLines = 1,
                 )
                 OutlinedTextField(
                     value = value,
@@ -451,19 +458,37 @@ private fun QuantityFields(
                         .weight(1f)
                         .height(56.dp),
                     singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = inventoryFieldColors(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
             }
         }
-        Button(
-            onClick = onEnter,
-            enabled = ready,
+        Row(
             modifier = Modifier
+                .widthIn(max = 520.dp)
                 .fillMaxWidth()
-                .height(56.dp),
-            shape = RoundedCornerShape(12.dp),
+                .padding(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("Spremi", fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.width(120.dp))
+            Button(
+                onClick = onEnter,
+                enabled = ready,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    disabledContainerColor = MaterialTheme.colorScheme.surface,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp),
+            ) {
+                Text("Spremi", fontWeight = FontWeight.SemiBold)
+            }
         }
     }
 }
@@ -490,6 +515,8 @@ private fun RaznoFields(
                 .height(56.dp),
             placeholder = { Text("Vrsta") },
             singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            colors = inventoryFieldColors(),
         )
         OutlinedTextField(
             value = count,
@@ -499,6 +526,8 @@ private fun RaznoFields(
                 .height(56.dp),
             placeholder = { Text("Količina") },
             singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            colors = inventoryFieldColors(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         )
         OutlinedTextField(
@@ -509,6 +538,8 @@ private fun RaznoFields(
                 .height(56.dp),
             placeholder = { Text("Napomena") },
             singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            colors = inventoryFieldColors(),
         )
         Button(
             onClick = onEnter,
@@ -648,6 +679,8 @@ private fun ColumnScope.EntryForm(
             placeholder = { Text("Šifra") },
             textStyle = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
             singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            colors = inventoryFieldColors(),
         )
         Spacer(Modifier.height(12.dp))
         NumberPad(onKey = onKey)

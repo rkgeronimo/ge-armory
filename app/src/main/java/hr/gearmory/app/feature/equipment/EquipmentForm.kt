@@ -10,12 +10,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -23,6 +25,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -34,12 +37,27 @@ import androidx.compose.ui.unit.dp
 @Composable
 internal fun EquipmentForm(
     piece: Piece,
-    onSave: (type: String, code: String, condition: String) -> Unit,
+    saving: Boolean,
+    notice: String?,
+    onSave: (type: String, size: String, state: Int, note: String) -> Unit,
     onCancel: () -> Unit,
 ) {
-    var type by rememberSaveable(piece.id) { mutableStateOf(piece.type) }
-    var code by rememberSaveable(piece.id) { mutableStateOf(piece.code) }
-    var condition by rememberSaveable(piece.id) { mutableStateOf(piece.condition) }
+    var type by rememberSaveable(piece.id) { mutableStateOf(piece.apiType) }
+    var size by rememberSaveable(piece.id) { mutableStateOf(piece.size) }
+    var state by rememberSaveable(piece.id) { mutableIntStateOf(piece.state) }
+    var note by rememberSaveable(piece.id) { mutableStateOf(piece.note) }
+    val sizeText = size.trim()
+    val noteText = note.trim()
+    val dirty = type != piece.apiType ||
+        sizeText != piece.size ||
+        state != piece.state ||
+        noteText != piece.note
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedContainerColor = MaterialTheme.colorScheme.surface,
+        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+        disabledContainerColor = MaterialTheme.colorScheme.surface,
+        disabledTextColor = MaterialTheme.colorScheme.onSurface,
+    )
 
     Column(
         modifier = Modifier
@@ -48,68 +66,83 @@ internal fun EquipmentForm(
             .padding(24.dp)
             .widthIn(max = 560.dp),
     ) {
-        Text(
-            text = "Vrsta",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Spacer(Modifier.height(8.dp))
+        SectionLabel("Vrsta")
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            equipmentTypes.forEach { option ->
+            inventoryTypes.forEach { (key, label) ->
                 ChoiceChip(
-                    label = option,
-                    selected = option == type,
-                    onClick = { type = option },
+                    label = typeTabLabel(label),
+                    selected = key == type,
+                    onClick = { if (!saving) type = key },
                 )
             }
         }
         Spacer(Modifier.height(20.dp))
-        Text(
-            text = "Šifra",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Spacer(Modifier.height(8.dp))
+        SectionLabel("Šifra")
         OutlinedTextField(
-            value = code,
-            onValueChange = { code = it },
+            value = piece.code,
+            onValueChange = {},
+            enabled = false,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                disabledContainerColor = MaterialTheme.colorScheme.surface,
-            ),
+            colors = fieldColors,
         )
         Spacer(Modifier.height(20.dp))
-        Text(
-            text = "Stanje",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+        SectionLabel("Veličina")
+        OutlinedTextField(
+            value = size,
+            onValueChange = { size = it },
+            enabled = !saving,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            colors = fieldColors,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(20.dp))
+        SectionLabel("Stanje")
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            pieceConditions.forEach { option ->
+            inventoryStates.forEach { (value, label) ->
                 ChoiceChip(
-                    label = option,
-                    selected = option == condition,
-                    onClick = { condition = option },
+                    label = label,
+                    selected = value == state,
+                    onClick = { if (!saving) state = value },
                 )
             }
+        }
+        Spacer(Modifier.height(20.dp))
+        SectionLabel("Napomena")
+        OutlinedTextField(
+            value = note,
+            onValueChange = { note = it },
+            enabled = !saving,
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 2,
+            shape = RoundedCornerShape(12.dp),
+            colors = fieldColors,
+        )
+        if (notice != null) {
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = notice,
+                color = MaterialTheme.colorScheme.error,
+                fontWeight = FontWeight.Medium,
+            )
         }
         Spacer(Modifier.height(28.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(
                 onClick = onCancel,
+                enabled = !saving,
                 modifier = Modifier
                     .weight(1f)
                     .height(56.dp),
@@ -117,13 +150,17 @@ internal fun EquipmentForm(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.secondary,
                     contentColor = MaterialTheme.colorScheme.onSecondary,
+                    disabledContainerColor = MaterialTheme.colorScheme.surface,
+                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
             ) {
                 Text("Odustani")
             }
             Button(
-                onClick = { onSave(type, code.trim(), condition) },
-                enabled = code.isNotBlank(),
+                onClick = {
+                    if (!saving && dirty) onSave(type, sizeText, state, noteText)
+                },
+                enabled = dirty || saving,
                 modifier = Modifier
                     .weight(1f)
                     .height(56.dp),
@@ -133,10 +170,28 @@ internal fun EquipmentForm(
                     disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
             ) {
-                Text("Spremi", fontWeight = FontWeight.SemiBold)
+                if (saving) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Text("Spremi", fontWeight = FontWeight.SemiBold)
+                }
             }
         }
     }
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+    )
+    Spacer(Modifier.height(8.dp))
 }
 
 @Composable

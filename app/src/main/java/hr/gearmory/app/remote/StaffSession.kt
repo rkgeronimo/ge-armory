@@ -8,27 +8,58 @@ internal object StaffSession {
     var credentials: StaffCredentials? = null
         private set
 
-    private val io = Executors.newSingleThreadExecutor()
+    var cachedActive: List<Reservation>? = null
+        private set
+
+    var cachedPending: List<Reservation>? = null
+        private set
+
+    var cachedInventory: List<InventoryPiece>? = null
+        private set
+
+    private val io = Executors.newFixedThreadPool(2)
     private val main = Handler(Looper.getMainLooper())
 
     fun signIn(username: String, password: String, onResult: (String?) -> Unit) {
         val next = StaffCredentials(username.trim(), password.replace(" ", ""))
         io.execute {
-            val error = try {
+            val loaded = try {
                 ReservationClient.listActive(next)
-                null
             } catch (thrown: Throwable) {
-                reservationNotice(thrown)
+                main.post { onResult(reservationNotice(thrown)) }
+                return@execute
             }
             main.post {
-                if (error == null) credentials = next
-                onResult(error)
+                credentials = next
+                cachedActive = loaded
+                onResult(null)
+                request(ReservationClient::listPending) { result ->
+                    result.onSuccess { cachedPending = it }
+                }
+                request(ReservationClient::listInventory) { result ->
+                    result.onSuccess { cachedInventory = it }
+                }
             }
         }
     }
 
+    fun rememberActive(list: List<Reservation>) {
+        cachedActive = list
+    }
+
+    fun rememberPending(list: List<Reservation>) {
+        cachedPending = list
+    }
+
+    fun rememberInventory(list: List<InventoryPiece>) {
+        cachedInventory = list
+    }
+
     fun signOut() {
         credentials = null
+        cachedActive = null
+        cachedPending = null
+        cachedInventory = null
     }
 
     fun <T> request(block: (StaffCredentials) -> T, onResult: (Result<T>) -> Unit) {

@@ -73,16 +73,20 @@ internal class IssuanceViewModel : ViewModel() {
     var saving by mutableStateOf(false)
 
     fun reload() {
-        loading = true
+        if (reservations.isEmpty()) {
+            StaffSession.cachedPending?.let { reservations.addAll(it) }
+        }
+        loading = reservations.isEmpty()
         notice = null
         StaffSession.request(ReservationClient::listPending) { result ->
             loading = false
             result.fold(
                 onSuccess = { loaded ->
+                    StaffSession.rememberPending(loaded)
                     reservations.clear()
                     reservations.addAll(loaded)
                 },
-                onFailure = { notice = reservationNotice(it) },
+                onFailure = { if (reservations.isEmpty()) notice = reservationNotice(it) },
             )
         }
     }
@@ -143,6 +147,12 @@ internal class IssuanceViewModel : ViewModel() {
                     if (index >= 0) {
                         if (updated.state == 0) reservations[index] = updated
                         else reservations.removeAt(index)
+                    }
+                    StaffSession.rememberPending(reservations.toList())
+                    if (updated.state != 0) {
+                        val active = StaffSession.cachedActive.orEmpty()
+                            .filter { it.id != updated.id }
+                        StaffSession.rememberActive(active + updated)
                     }
                     clearAll()
                     onDone()

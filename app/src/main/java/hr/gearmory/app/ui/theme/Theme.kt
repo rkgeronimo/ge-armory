@@ -9,6 +9,9 @@ import androidx.compose.ui.graphics.Color
 
 val StatusInStock = Color(0xFF2B7FD4)
 val StatusIssued = Color(0xFFD46A52)
+val StatusBroken = Color(0xFFBA1A1A)
+val StatusLost = Color(0xFF7A3E12)
+val StatusWrittenOff = Color(0xFF5C6B76)
 
 private val LightColors = lightColorScheme(
     primary = Color(0xFF1A6BB5),

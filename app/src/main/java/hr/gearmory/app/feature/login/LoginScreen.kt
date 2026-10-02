@@ -25,6 +25,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -42,6 +43,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import hr.gearmory.app.R
@@ -70,7 +72,10 @@ internal fun LoginScreen(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                LoginBranding()
+                LoginBranding(
+                    centered = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
                 Spacer(Modifier.height(36.dp))
                 LoginCard(
                     error = error,
@@ -105,8 +110,14 @@ internal fun LoginScreen(
 }
 
 @Composable
-private fun LoginBranding(modifier: Modifier = Modifier) {
-    Column(modifier = modifier) {
+private fun LoginBranding(
+    modifier: Modifier = Modifier,
+    centered: Boolean = false,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = if (centered) Alignment.CenterHorizontally else Alignment.Start,
+    ) {
         Image(
             painter = painterResource(R.drawable.logo_blue),
             contentDescription = "Ronilački klub Geronimo",
@@ -118,6 +129,7 @@ private fun LoginBranding(modifier: Modifier = Modifier) {
             color = MaterialTheme.colorScheme.onPrimaryContainer,
             fontSize = 34.sp,
             fontWeight = FontWeight.Bold,
+            textAlign = if (centered) TextAlign.Center else TextAlign.Start,
         )
         Spacer(Modifier.height(10.dp))
         Text(
@@ -125,12 +137,22 @@ private fun LoginBranding(modifier: Modifier = Modifier) {
             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
             fontSize = 17.sp,
             lineHeight = 25.sp,
-            modifier = Modifier.widthIn(max = 360.dp),
+            textAlign = if (centered) TextAlign.Center else TextAlign.Start,
+            modifier = Modifier
+                .widthIn(max = 360.dp)
+                .then(if (centered) Modifier.fillMaxWidth() else Modifier),
         )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun loginFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedContainerColor = MaterialTheme.colorScheme.surface,
+    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+    disabledContainerColor = MaterialTheme.colorScheme.surface,
+)
+
 @Composable
 private fun LoginCard(
     error: String?,
@@ -166,6 +188,7 @@ private fun LoginCard(
                 singleLine = true,
                 enabled = !busy,
                 label = { Text("Korisnik") },
+                colors = loginFieldColors(),
             )
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
@@ -177,6 +200,7 @@ private fun LoginCard(
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 label = { Text("Lozinka aplikacije") },
+                colors = loginFieldColors(),
             )
             if (error != null) {
                 Spacer(Modifier.height(12.dp))
