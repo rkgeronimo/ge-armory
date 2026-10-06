@@ -276,7 +276,7 @@ internal object ReservationClient {
         id = json.optString("id"),
         type = json.optString("type"),
         typeLabel = json.optString("type_label"),
-        size = json.optString("size"),
+        size = json.optNullableString("size").orEmpty().takeUnless { it.equals("null", true) }.orEmpty(),
         state = json.optInt("state"),
         status = json.optString("status"),
         userName = json.optNullableString("user_name"),

@@ -212,7 +212,7 @@ private fun InventoryPiece.toPiece(): Piece {
         status = status,
         holder = userName?.takeIf { it.isNotBlank() },
         issuedOn = shownDate(issueDate),
-        size = size.trim(),
+        size = size.trim().takeUnless { it.equals("null", true) }.orEmpty(),
         apiType = type,
         state = state,
         note = note?.trim().orEmpty(),

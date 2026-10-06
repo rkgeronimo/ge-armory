@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -225,11 +226,12 @@ private fun PieceTable(
             Box(Modifier.background(MaterialTheme.colorScheme.primaryContainer)) {
             TableRow(
                 code = "Šifra",
-                type = "Vrsta opreme",
+                type = "Vrsta",
                 size = "Veličina",
                 status = "Status",
                 holder = "Zadužio/la",
                 issuedOn = "Datum izdavanja",
+                note = "Napomena",
                 header = true,
                 onOpen = {},
             )
@@ -239,10 +241,11 @@ private fun PieceTable(
             TableRow(
                 code = piece.code,
                 type = piece.type,
-                size = piece.size.ifBlank { pieceSize(piece.type, piece.code) }.ifBlank { "—" },
+                size = piece.size.ifBlank { pieceSize(piece.type, piece.code) },
                 status = piece.status,
                 holder = piece.holder.orEmpty(),
                 issuedOn = piece.issuedOn.orEmpty(),
+                note = piece.note,
                 header = false,
                 showPill = true,
                 onOpen = { onOpen(piece.id) },
@@ -260,6 +263,7 @@ private fun TableRow(
     status: String,
     holder: String,
     issuedOn: String,
+    note: String,
     header: Boolean,
     onOpen: () -> Unit,
     showPill: Boolean = false,
@@ -274,14 +278,30 @@ private fun TableRow(
     ) {
         Text(code, modifier = Modifier.weight(0.9f), fontWeight = if (header) FontWeight.SemiBold else FontWeight.Medium)
         Text(type, modifier = Modifier.weight(1.2f), fontWeight = if (header) FontWeight.SemiBold else FontWeight.Normal)
-        Text(size, modifier = Modifier.weight(0.7f), fontWeight = if (header) FontWeight.SemiBold else FontWeight.Normal)
-        Box(modifier = Modifier.weight(1f)) {
+        Text(
+            size,
+            modifier = Modifier
+                .weight(1.15f)
+                .padding(end = 20.dp),
+            fontWeight = if (header) FontWeight.SemiBold else FontWeight.Normal,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Box(modifier = Modifier.weight(1.35f)) {
             if (showPill) StatusPill(status) else if (header) {
                 Text("Status", fontWeight = FontWeight.SemiBold)
             }
         }
         Text(holder, modifier = Modifier.weight(1.3f), fontWeight = if (header) FontWeight.SemiBold else FontWeight.Normal)
-        Text(issuedOn, modifier = Modifier.weight(1.2f), fontWeight = if (header) FontWeight.SemiBold else FontWeight.Normal)
+        Text(issuedOn, modifier = Modifier.weight(1.1f), fontWeight = if (header) FontWeight.SemiBold else FontWeight.Normal)
+        Text(
+            note,
+            modifier = Modifier.weight(1.6f),
+            fontWeight = if (header) FontWeight.SemiBold else FontWeight.Normal,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -357,6 +377,8 @@ private fun StatusPill(status: String) {
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
             color = Color.White,
             style = MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            softWrap = false,
             fontWeight = FontWeight.Medium,
         )
     }

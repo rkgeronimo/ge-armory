@@ -66,7 +66,7 @@ internal fun EquipmentForm(
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Readout("Vrsta", typeName)
             Readout("Šifra", piece.code)
-            Readout("Veličina", piece.size.ifBlank { "—" })
+            Readout("Veličina", piece.size)
         }
         Spacer(Modifier.height(20.dp))
         SectionLabel("Stanje")
