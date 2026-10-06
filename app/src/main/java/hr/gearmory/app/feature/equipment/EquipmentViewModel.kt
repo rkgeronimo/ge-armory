@@ -119,8 +119,6 @@ internal class EquipmentViewModel : ViewModel() {
     var loading by mutableStateOf(true)
     var saving by mutableStateOf(false)
 
-    val checkedIds = mutableStateListOf<String>()
-
     fun reload() {
         if (pieces.isEmpty()) {
             StaffSession.cachedInventory?.let { cached ->
@@ -136,36 +134,22 @@ internal class EquipmentViewModel : ViewModel() {
                     StaffSession.rememberInventory(loaded)
                     pieces.clear()
                     pieces.addAll(loaded.map { it.toPiece() })
-                    checkedIds.clear()
                 },
                 onFailure = { if (pieces.isEmpty()) notice = reservationNotice(it) },
             )
         }
     }
 
-    fun toggleChecked(id: String) {
-        if (id in checkedIds) checkedIds.remove(id) else checkedIds.add(id)
-    }
-
-    fun deleteChecked() {
-        pieces.removeAll { it.id in checkedIds }
-        checkedIds.clear()
-    }
-
     fun save(
         piece: Piece,
-        type: String,
-        size: String,
         state: Int,
         note: String,
         onDone: () -> Unit,
     ) {
         if (saving || piece.id.isBlank()) return
-        val nextType = type.takeIf { it != piece.apiType }
-        val nextSize = size.takeIf { it != piece.size }
         val nextState = state.takeIf { it != piece.state }
         val nextNote = note.takeIf { it != piece.note }
-        if (nextType == null && nextSize == null && nextState == null && nextNote == null) {
+        if (nextState == null && nextNote == null) {
             onDone()
             return
         }
@@ -175,8 +159,8 @@ internal class EquipmentViewModel : ViewModel() {
             ReservationClient.updateInventory(
                 credentials,
                 piece.id,
-                nextType,
-                nextSize,
+                null,
+                null,
                 nextState,
                 nextNote,
             )
@@ -187,7 +171,6 @@ internal class EquipmentViewModel : ViewModel() {
                     val index = pieces.indexOfFirst { it.id == piece.id }
                     if (updated.state == 5) {
                         if (index >= 0) pieces.removeAt(index)
-                        checkedIds.remove(piece.id)
                     } else if (index >= 0) {
                         pieces[index] = updated.toPiece()
                     }

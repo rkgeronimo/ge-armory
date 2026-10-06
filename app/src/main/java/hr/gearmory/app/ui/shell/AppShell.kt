@@ -54,8 +54,17 @@ internal fun AppShell(
     onLogout: () -> Unit,
 ) {
     var selected by rememberSaveable { mutableStateOf(Destination.Home) }
+    var openReservationId by rememberSaveable { mutableStateOf<Long?>(null) }
     val isPortrait =
         LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
+    val select: (Destination) -> Unit = { destination ->
+        openReservationId = null
+        selected = destination
+    }
+    val openRequest: (Destination, Long) -> Unit = { destination, id ->
+        openReservationId = id
+        selected = destination
+    }
 
     Box(
         modifier = Modifier
@@ -66,9 +75,11 @@ internal fun AppShell(
             PortraitShell(
                 selected = selected,
                 darkTheme = darkTheme,
-                onSelect = { selected = it },
+                onSelect = select,
                 onToggleTheme = onToggleTheme,
                 onLogout = onLogout,
+                openReservationId = openReservationId,
+                onOpenRequest = openRequest,
             )
         } else {
             Row(modifier = Modifier.fillMaxSize()) {
@@ -76,7 +87,7 @@ internal fun AppShell(
                     NavigationPanel(
                         selected = selected,
                         darkTheme = darkTheme,
-                        onSelect = { selected = it },
+                        onSelect = select,
                         onToggleTheme = onToggleTheme,
                         onLogout = onLogout,
                         modifier = Modifier.width(220.dp),
@@ -90,6 +101,8 @@ internal fun AppShell(
                 )
                 ShellContent(
                     selected = selected,
+                    openReservationId = openReservationId,
+                    onOpenRequest = openRequest,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -104,6 +117,8 @@ private fun PortraitShell(
     onSelect: (Destination) -> Unit,
     onToggleTheme: () -> Unit,
     onLogout: () -> Unit,
+    openReservationId: Long?,
+    onOpenRequest: (Destination, Long) -> Unit,
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -158,6 +173,8 @@ private fun PortraitShell(
             HorizontalDivider()
             ShellContent(
                 selected = selected,
+                openReservationId = openReservationId,
+                onOpenRequest = onOpenRequest,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -167,6 +184,8 @@ private fun PortraitShell(
 @Composable
 private fun ShellContent(
     selected: Destination,
+    openReservationId: Long?,
+    onOpenRequest: (Destination, Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -175,9 +194,12 @@ private fun ShellContent(
             .background(MaterialTheme.colorScheme.surfaceVariant),
     ) {
         when (selected) {
-            Destination.Home -> HomeScreen()
-            Destination.Issuance -> IssuanceScreen()
-            Destination.Returns -> ReturnsScreen()
+            Destination.Home -> HomeScreen(
+                onOpenIssuance = { onOpenRequest(Destination.Issuance, it) },
+                onOpenReturns = { onOpenRequest(Destination.Returns, it) },
+            )
+            Destination.Issuance -> IssuanceScreen(openId = openReservationId)
+            Destination.Returns -> ReturnsScreen(openId = openReservationId)
             Destination.Equipment -> EquipmentScreen()
             Destination.Inventory -> InventoryScreen()
             Destination.InventoryPopis -> InventoryPopisScreen()

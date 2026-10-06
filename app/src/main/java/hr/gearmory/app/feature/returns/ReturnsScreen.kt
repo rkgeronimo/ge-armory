@@ -62,9 +62,10 @@ import hr.gearmory.app.remote.pieceTitle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ReturnsScreen() {
+internal fun ReturnsScreen(openId: Long? = null) {
     var pickedId by rememberSaveable { mutableStateOf<Long?>(null) }
     var opened by rememberSaveable { mutableStateOf(false) }
+    var appliedOpenId by rememberSaveable { mutableStateOf<Long?>(null) }
     var query by rememberSaveable { mutableStateOf("") }
     val viewModel: ReturnsViewModel = viewModel()
     val shown = viewModel.reservations.filter { it.openPieces().isNotEmpty() }
@@ -78,6 +79,14 @@ internal fun ReturnsScreen() {
 
     LaunchedEffect(Unit) {
         viewModel.reload()
+    }
+    LaunchedEffect(openId) {
+        if (openId != null && appliedOpenId != openId) {
+            appliedOpenId = openId
+            viewModel.clearMarks()
+            pickedId = openId
+            opened = true
+        }
     }
 
     fun pick(reservation: Reservation) {

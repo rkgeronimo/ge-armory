@@ -48,9 +48,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun IssuanceScreen() {
+internal fun IssuanceScreen(openId: Long? = null) {
     var pickedId by rememberSaveable { mutableStateOf<Long?>(null) }
     var opened by rememberSaveable { mutableStateOf(false) }
+    var appliedOpenId by rememberSaveable { mutableStateOf<Long?>(null) }
     var query by rememberSaveable { mutableStateOf("") }
     var selectedEquipment by rememberSaveable { mutableStateOf(loanEquipmentTypes.first()) }
     val issuanceViewModel: IssuanceViewModel = viewModel()
@@ -71,6 +72,15 @@ internal fun IssuanceScreen() {
 
     LaunchedEffect(Unit) {
         issuanceViewModel.reload()
+    }
+    LaunchedEffect(openId) {
+        if (openId != null && appliedOpenId != openId) {
+            appliedOpenId = openId
+            issuanceViewModel.clearAll()
+            pickedId = openId
+            opened = true
+            selectedEquipment = loanEquipmentTypes.first()
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {

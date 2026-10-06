@@ -1,7 +1,6 @@
 package hr.gearmory.app.feature.equipment
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,14 +12,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -68,7 +64,6 @@ internal fun EquipmentScreen() {
     var editingId by rememberSaveable { mutableStateOf<String?>(null) }
     var page by rememberSaveable { mutableIntStateOf(0) }
     val editing = viewModel.pieces.firstOrNull { it.id == editingId }
-    val checkedIds = viewModel.checkedIds
     val visible = viewModel.pieces.filter { piece ->
         val statusOk = statusFilter == "Sve" || piece.status == statusFilter
         val typeOk = typeFilter == "Sve" || piece.apiType == typeFilter
@@ -110,8 +105,8 @@ internal fun EquipmentScreen() {
             piece = editing,
             saving = viewModel.saving,
             notice = viewModel.notice,
-            onSave = { type, size, state, note ->
-                viewModel.save(editing, type, size, state, note) {
+            onSave = { state, note ->
+                viewModel.save(editing, state, note) {
                     editingId = null
                 }
             },
@@ -172,20 +167,6 @@ internal fun EquipmentScreen() {
                 selected = typeFilter,
                 onSelect = { typeFilter = it },
             )
-            if (checkedIds.isNotEmpty()) {
-                Spacer(Modifier.height(10.dp))
-                Button(
-                    onClick = viewModel::deleteChecked,
-                    modifier = Modifier.height(56.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError,
-                    ),
-                ) {
-                    Text("Briši", fontWeight = FontWeight.SemiBold)
-                }
-            }
         }
         HorizontalDivider()
         if (shown.isEmpty()) {
@@ -203,8 +184,6 @@ internal fun EquipmentScreen() {
         } else {
             PieceTable(
                 pieces = shown,
-                checkedIds = checkedIds,
-                onToggle = viewModel::toggleChecked,
                 onOpen = { editingId = it },
                 modifier = Modifier
                     .weight(1f)
@@ -233,8 +212,6 @@ private fun IconSearch() {
 @Composable
 private fun PieceTable(
     pieces: List<Piece>,
-    checkedIds: List<String>,
-    onToggle: (String) -> Unit,
     onOpen: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -254,8 +231,6 @@ private fun PieceTable(
                 holder = "Zadužio/la",
                 issuedOn = "Datum izdavanja",
                 header = true,
-                checked = false,
-                onToggle = {},
                 onOpen = {},
             )
             }
@@ -269,9 +244,7 @@ private fun PieceTable(
                 holder = piece.holder.orEmpty(),
                 issuedOn = piece.issuedOn.orEmpty(),
                 header = false,
-                checked = piece.id in checkedIds,
                 showPill = true,
-                onToggle = { onToggle(piece.id) },
                 onOpen = { onOpen(piece.id) },
             )
         }
@@ -288,8 +261,6 @@ private fun TableRow(
     holder: String,
     issuedOn: String,
     header: Boolean,
-    checked: Boolean,
-    onToggle: () -> Unit,
     onOpen: () -> Unit,
     showPill: Boolean = false,
 ) {
@@ -297,14 +268,10 @@ private fun TableRow(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 64.dp)
-            .clickable(enabled = !header, onClick = onOpen),
+            .clickable(enabled = !header, onClick = onOpen)
+            .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (header) {
-            Spacer(Modifier.width(48.dp))
-        } else {
-            CircleCheck(checked = checked, onToggle = onToggle)
-        }
         Text(code, modifier = Modifier.weight(0.9f), fontWeight = if (header) FontWeight.SemiBold else FontWeight.Medium)
         Text(type, modifier = Modifier.weight(1.2f), fontWeight = if (header) FontWeight.SemiBold else FontWeight.Normal)
         Text(size, modifier = Modifier.weight(0.7f), fontWeight = if (header) FontWeight.SemiBold else FontWeight.Normal)
@@ -315,53 +282,6 @@ private fun TableRow(
         }
         Text(holder, modifier = Modifier.weight(1.3f), fontWeight = if (header) FontWeight.SemiBold else FontWeight.Normal)
         Text(issuedOn, modifier = Modifier.weight(1.2f), fontWeight = if (header) FontWeight.SemiBold else FontWeight.Normal)
-    }
-}
-
-@Composable
-private fun CircleCheck(
-    checked: Boolean,
-    onToggle: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .clickable(onClick = onToggle),
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(28.dp)
-                .background(
-                    color = if (checked) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        Color.Transparent
-                    },
-                    shape = MaterialTheme.shapes.extraLarge,
-                )
-                .border(
-                    border = BorderStroke(
-                        width = 1.dp,
-                        color = if (checked) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.outline
-                        },
-                    ),
-                    shape = MaterialTheme.shapes.extraLarge,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (checked) {
-                Icon(
-                    imageVector = Icons.Rounded.Check,
-                    contentDescription = "Odabrano",
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
-        }
     }
 }
 

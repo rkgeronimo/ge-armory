@@ -39,19 +39,16 @@ internal fun EquipmentForm(
     piece: Piece,
     saving: Boolean,
     notice: String?,
-    onSave: (type: String, size: String, state: Int, note: String) -> Unit,
+    onSave: (state: Int, note: String) -> Unit,
     onCancel: () -> Unit,
 ) {
-    var type by rememberSaveable(piece.id) { mutableStateOf(piece.apiType) }
-    var size by rememberSaveable(piece.id) { mutableStateOf(piece.size) }
     var state by rememberSaveable(piece.id) { mutableIntStateOf(piece.state) }
     var note by rememberSaveable(piece.id) { mutableStateOf(piece.note) }
-    val sizeText = size.trim()
     val noteText = note.trim()
-    val dirty = type != piece.apiType ||
-        sizeText != piece.size ||
-        state != piece.state ||
-        noteText != piece.note
+    val dirty = state != piece.state || noteText != piece.note
+    val typeName = piece.type.ifBlank {
+        inventoryTypes.firstOrNull { it.first == piece.apiType }?.second ?: piece.apiType
+    }
     val fieldColors = OutlinedTextFieldDefaults.colors(
         focusedContainerColor = MaterialTheme.colorScheme.surface,
         unfocusedContainerColor = MaterialTheme.colorScheme.surface,
@@ -66,45 +63,11 @@ internal fun EquipmentForm(
             .padding(24.dp)
             .widthIn(max = 560.dp),
     ) {
-        SectionLabel("Vrsta")
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            inventoryTypes.forEach { (key, label) ->
-                ChoiceChip(
-                    label = typeTabLabel(label),
-                    selected = key == type,
-                    onClick = { if (!saving) type = key },
-                )
-            }
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Readout("Vrsta", typeName)
+            Readout("Šifra", piece.code)
+            Readout("Veličina", piece.size.ifBlank { "—" })
         }
-        Spacer(Modifier.height(20.dp))
-        SectionLabel("Šifra")
-        OutlinedTextField(
-            value = piece.code,
-            onValueChange = {},
-            enabled = false,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            colors = fieldColors,
-        )
-        Spacer(Modifier.height(20.dp))
-        SectionLabel("Veličina")
-        OutlinedTextField(
-            value = size,
-            onValueChange = { size = it },
-            enabled = !saving,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            colors = fieldColors,
-        )
         Spacer(Modifier.height(20.dp))
         SectionLabel("Stanje")
         FlowRow(
@@ -158,7 +121,7 @@ internal fun EquipmentForm(
             }
             Button(
                 onClick = {
-                    if (!saving && dirty) onSave(type, sizeText, state, noteText)
+                    if (!saving && dirty) onSave(state, noteText)
                 },
                 enabled = dirty || saving,
                 modifier = Modifier
@@ -181,6 +144,23 @@ internal fun EquipmentForm(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun Readout(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Spacer(Modifier.height(8.dp))
+        ChoiceChip(
+            label = value,
+            selected = false,
+            onClick = {},
+        )
     }
 }
 

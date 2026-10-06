@@ -38,33 +38,3 @@ internal class HomeViewModel : ViewModel() {
         }
     }
 }
-
-internal data class ExcursionGroup(
-    val title: String,
-    val rows: List<HomeRow>,
-)
-
-internal data class HomeRow(
-    val name: String,
-    val returning: Boolean,
-)
-
-internal fun excursionGroups(
-    pending: List<Reservation>,
-    active: List<Reservation>,
-): List<ExcursionGroup> {
-    val rows = pending.map { it to false } + active.map { it to true }
-    return rows
-        .groupBy { (reservation, _) ->
-            reservation.excursion?.takeIf { it.isNotBlank() } ?: "Bez izleta"
-        }
-        .map { (title, items) ->
-            ExcursionGroup(
-                title = title,
-                rows = items
-                    .map { (reservation, returning) -> HomeRow(reservation.userName, returning) }
-                    .sortedBy { it.name },
-            )
-        }
-        .sortedBy { it.title }
-}
