@@ -57,6 +57,11 @@ internal data class ReservedPiece(
     val returned: Int?,
 )
 
+internal data class StaffUser(
+    val id: Long,
+    val userName: String,
+)
+
 internal data class Reservation(
     val id: Long,
     val userId: Long,
@@ -79,6 +84,7 @@ internal fun reservationNotice(error: Throwable): String = when (error) {
         "rkg_forbidden" -> "Nema ovlasti."
         "rkg_invalid_return" -> "Oznaka nije valjana."
         "rkg_not_found" -> "Zahtjev nije pronađen."
+        "rkg_invalid" -> "Korisnik nije valjan."
         "rkg_unavailable" -> "Zahtjev nije dostupan."
         else -> "Stranica nije odgovorila."
     }
@@ -123,6 +129,34 @@ internal object ReservationClient {
     fun listActive(credentials: StaffCredentials): List<Reservation> = list(credentials, 1)
 
     fun listPending(credentials: StaffCredentials): List<Reservation> = list(credentials, 0)
+
+    fun listUsers(credentials: StaffCredentials): List<StaffUser> {
+        val body = call(credentials, "GET", "/users", null)
+        val array = JSONArray(body)
+        return List(array.length()) { index ->
+            val json = array.getJSONObject(index)
+            StaffUser(
+                id = json.getLong("id"),
+                userName = json.optString("user_name"),
+            )
+        }
+    }
+
+    fun createReservation(
+        credentials: StaffCredentials,
+        userId: Long,
+        codeByKey: Map<String, String>,
+    ): Reservation {
+        val equipment = JSONObject()
+        codeByKey.forEach { (key, code) ->
+            if (key !in equipmentKeys || code.isBlank()) return@forEach
+            equipment.put(key, JSONObject().put("code", code))
+        }
+        val body = JSONObject().put("user_id", userId)
+        if (equipment.length() > 0) body.put("equipment", equipment)
+        val text = call(credentials, "POST", "/reservations", body.toString())
+        return parseReservation(JSONObject(text))
+    }
 
     fun listInventory(credentials: StaffCredentials): List<InventoryPiece> {
         val body = call(credentials, "GET", "/inventory", null)

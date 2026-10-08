@@ -12,6 +12,7 @@ import hr.gearmory.app.remote.Reservation
 import hr.gearmory.app.remote.ReservationClient
 import hr.gearmory.app.remote.ReservedPiece
 import hr.gearmory.app.remote.StaffSession
+import hr.gearmory.app.remote.StaffUser
 import hr.gearmory.app.remote.reservationNotice
 
 internal const val LoanMaskaDisalica = "Maska i Disalica"
@@ -68,6 +69,7 @@ internal fun loanReady(type: String, size: String, number: String): Boolean {
 
 internal class IssuanceViewModel : ViewModel() {
     val reservations = mutableStateListOf<Reservation>()
+    val users = mutableStateListOf<StaffUser>()
     var notice by mutableStateOf<String?>(null)
     var loading by mutableStateOf(true)
     var saving by mutableStateOf(false)
@@ -123,17 +125,47 @@ internal class IssuanceViewModel : ViewModel() {
         equipmentSizes.clear()
     }
 
-    fun issue(reservationId: Long, onDone: () -> Unit) {
-        val codes = buildMap {
-            loanEquipmentTypes.forEach { type ->
-                val key = loanApiKey[type] ?: return@forEach
-                val number = equipmentValues[type].orEmpty()
-                val size = equipmentSizes[type].orEmpty()
-                if (!loanReady(type, size, number)) return@forEach
-                val code = loanField(type, size, number)
-                if (code.isNotBlank()) put(key, code)
-            }
+    fun loadUsers() {
+        StaffSession.request(ReservationClient::listUsers) { result ->
+            result.fold(
+                onSuccess = { loaded ->
+                    users.clear()
+                    users.addAll(loaded.sortedBy { it.userName })
+                },
+                onFailure = { notice = reservationNotice(it) },
+            )
         }
+    }
+
+    fun createWalkIn(userId: Long, onDone: () -> Unit) {
+        val codes = issuedCodes()
+        if (codes.isEmpty() || saving) return
+        saving = true
+        notice = null
+        StaffSession.request({ credentials ->
+            ReservationClient.createReservation(credentials, userId, codes)
+        }) { result ->
+            saving = false
+            result.fold(
+                onSuccess = { created ->
+                    if (created.state == 0) {
+                        reservations.add(0, created)
+                        StaffSession.rememberPending(reservations.toList())
+                    } else {
+                        val active = StaffSession.cachedActive.orEmpty()
+                            .filter { it.id != created.id }
+                        StaffSession.rememberActive(listOf(created) + active)
+                    }
+                    clearAll()
+                    onDone()
+                },
+                onFailure = { notice = reservationNotice(it) },
+            )
+        }
+    }
+
+    fun issue(reservationId: Long, onDone: () -> Unit) {
+        val codes = issuedCodes()
         if (codes.isEmpty() || saving) return
         saving = true
         notice = null
@@ -159,6 +191,17 @@ internal class IssuanceViewModel : ViewModel() {
                 },
                 onFailure = { notice = reservationNotice(it) },
             )
+        }
+    }
+
+    private fun issuedCodes(): Map<String, String> = buildMap {
+        loanEquipmentTypes.forEach { type ->
+            val key = loanApiKey[type] ?: return@forEach
+            val number = equipmentValues[type].orEmpty()
+            val size = equipmentSizes[type].orEmpty()
+            if (!loanReady(type, size, number)) return@forEach
+            val code = loanField(type, size, number)
+            if (code.isNotBlank()) put(key, code)
         }
     }
 }

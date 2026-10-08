@@ -66,11 +66,13 @@ internal fun IssuanceEditor(
     onKey: (String, String) -> Unit,
     onClearEquipment: (String) -> Unit,
     saving: Boolean,
+    canIssue: Boolean = true,
     onCancel: () -> Unit,
     onIssue: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surfaceVariant),
     ) {
@@ -84,6 +86,7 @@ internal fun IssuanceEditor(
                 onKey = onKey,
                 onClearEquipment = onClearEquipment,
                 saving = saving,
+                canIssue = canIssue,
                 onCancel = onCancel,
                 onIssue = onIssue,
             )
@@ -97,6 +100,7 @@ internal fun IssuanceEditor(
                 onKey = onKey,
                 onClearEquipment = onClearEquipment,
                 saving = saving,
+                canIssue = canIssue,
                 onCancel = onCancel,
                 onIssue = onIssue,
             )
@@ -114,6 +118,7 @@ private fun WideIssuanceEditor(
     onKey: (String, String) -> Unit,
     onClearEquipment: (String) -> Unit,
     saving: Boolean,
+    canIssue: Boolean,
     onCancel: () -> Unit,
     onIssue: () -> Unit,
 ) {
@@ -203,7 +208,7 @@ private fun WideIssuanceEditor(
             }
             Spacer(Modifier.height(10.dp))
             IssuanceActions(
-                enabled = loanEquipmentTypes.any {
+                enabled = canIssue && loanEquipmentTypes.any {
                     loanReady(it, equipmentSizes[it].orEmpty(), equipmentValues[it].orEmpty())
                 },
                 saving = saving,
@@ -224,6 +229,7 @@ private fun CompactIssuanceEditor(
     onKey: (String, String) -> Unit,
     onClearEquipment: (String) -> Unit,
     saving: Boolean,
+    canIssue: Boolean,
     onCancel: () -> Unit,
     onIssue: () -> Unit,
 ) {
@@ -298,7 +304,7 @@ private fun CompactIssuanceEditor(
         }
         Spacer(Modifier.height(10.dp))
         IssuanceActions(
-            enabled = loanEquipmentTypes.any {
+            enabled = canIssue && loanEquipmentTypes.any {
                 loanReady(it, equipmentSizes[it].orEmpty(), equipmentValues[it].orEmpty())
             },
             saving = saving,
