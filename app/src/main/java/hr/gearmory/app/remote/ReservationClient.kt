@@ -253,26 +253,29 @@ internal object ReservationClient {
         connection.readTimeout = 20_000
         connection.setRequestProperty("Authorization", credentials.header())
         connection.setRequestProperty("Accept", "application/json")
-        if (json != null) {
-            connection.doOutput = true
-            connection.setRequestProperty("Content-Type", "application/json")
-            connection.outputStream.use { stream ->
-                stream.write(json.toByteArray(Charsets.UTF_8))
+        try {
+            if (json != null) {
+                connection.doOutput = true
+                connection.setRequestProperty("Content-Type", "application/json")
+                connection.outputStream.use { stream ->
+                    stream.write(json.toByteArray(Charsets.UTF_8))
+                }
             }
-        }
-        val http = connection.responseCode
-        if (http in 300..399) {
+            val http = connection.responseCode
+            val text = (if (http in 200..299) connection.inputStream else connection.errorStream)
+                ?.bufferedReader(Charsets.UTF_8)
+                ?.use { it.readText() }
+                .orEmpty()
+            if (http in 300..399) {
+                throw ReservationException(http, null)
+            }
+            if (http !in 200..299) {
+                throw ReservationException(http, errorCode(text))
+            }
+            return text
+        } finally {
             connection.disconnect()
-            throw ReservationException(http, null)
         }
-        val text = (if (http in 200..299) connection.inputStream else connection.errorStream)
-            ?.bufferedReader(Charsets.UTF_8)
-            ?.use { it.readText() }
-            .orEmpty()
-        if (http !in 200..299) {
-            throw ReservationException(http, errorCode(text))
-        }
-        return text
     }
 
     private fun errorCode(text: String): String? = try {

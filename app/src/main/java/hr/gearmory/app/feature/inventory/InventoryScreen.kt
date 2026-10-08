@@ -97,8 +97,7 @@ internal fun InventoryScreen(viewModel: InventoryViewModel = viewModel()) {
         LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
 
     LaunchedEffect(Unit) {
-        viewModel.reload()
-        drafts = quantityTypes.associateWith { viewModel.quantityOf(it) }
+        viewModel.reload { drafts = quantityTypes.associateWith { viewModel.quantityOf(it) } }
     }
 
     fun selectType(option: String) {

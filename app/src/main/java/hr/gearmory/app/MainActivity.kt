@@ -70,7 +70,7 @@ private fun ArmoryApp(
     var loginBusy by remember { mutableStateOf(false) }
 
     Surface(modifier = Modifier.fillMaxSize()) {
-        if (isLoggedIn) {
+        if (isLoggedIn && StaffSession.credentials != null) {
             AppShell(
                 darkTheme = darkTheme,
                 onToggleTheme = onToggleTheme,

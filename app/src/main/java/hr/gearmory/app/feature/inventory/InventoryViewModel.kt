@@ -6,6 +6,12 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.concurrent.Executors
 
 internal data class InventoryEntry(
     val id: String,
@@ -24,32 +30,42 @@ internal class InventoryViewModel(app: Application) : AndroidViewModel(app) {
     var notice by mutableStateOf<String?>(null)
     private val store = InventoryFileStore(app)
     private var blocked = false
+    private val work = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
 
-    fun reload() {
-        store.ensure()
-        when (val load = store.read()) {
-            is InventoryLoad.Ready -> {
-                blocked = false
-                entries.clear()
-                entries.addAll(load.entries)
-                notice = if (load.dropped > 0 && store.write(load.entries)) {
-                    skippedRowsNotice(load.dropped)
-                } else if (load.dropped > 0) {
-                    CsvWriteError
-                } else {
-                    null
+    fun reload(onDone: (() -> Unit)? = null) {
+        viewModelScope.launch {
+            val load = withContext(work) {
+                store.ensure()
+                store.read()
+            }
+            when (load) {
+                is InventoryLoad.Ready -> {
+                    blocked = false
+                    entries.clear()
+                    entries.addAll(load.entries)
+                    notice = if (load.dropped > 0) {
+                        val wrote = withContext(work) { store.write(load.entries) }
+                        if (wrote) {
+                            skippedRowsNotice(load.dropped)
+                        } else {
+                            CsvWriteError
+                        }
+                    } else {
+                        null
+                    }
+                }
+                InventoryLoad.Corrupt -> {
+                    blocked = true
+                    notice = CsvReadError
+                    entries.clear()
+                }
+                InventoryLoad.Unavailable -> {
+                    blocked = true
+                    notice = CsvWriteError
+                    entries.clear()
                 }
             }
-            InventoryLoad.Corrupt -> {
-                blocked = true
-                notice = CsvReadError
-                entries.clear()
-            }
-            InventoryLoad.Unavailable -> {
-                blocked = true
-                notice = CsvWriteError
-                entries.clear()
-            }
+            onDone?.invoke()
         }
     }
 
@@ -166,14 +182,29 @@ internal class InventoryViewModel(app: Application) : AndroidViewModel(app) {
         entries.firstOrNull { it.type == type && it.isQuantity() }?.quantity.orEmpty()
 
     private fun commit(next: List<InventoryEntry>): Boolean {
-        if (!store.write(next)) {
+        if (blocked) {
             notice = CsvWriteError
             return false
         }
-        notice = null
+        val previous = entries.toList()
         entries.clear()
         entries.addAll(next)
+        notice = null
+        viewModelScope.launch {
+            val wrote = withContext(work) { store.write(next) }
+            if (!wrote) {
+                if (entries.toList() == next) {
+                    entries.clear()
+                    entries.addAll(previous)
+                }
+                notice = CsvWriteError
+            }
+        }
         return true
+    }
+
+    override fun onCleared() {
+        work.close()
     }
 
     private fun freshId(): String {
