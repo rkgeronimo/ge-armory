@@ -38,6 +38,7 @@ import hr.gearmory.app.R
 @Composable
 internal fun NavigationPanel(
     selected: Destination,
+    destinations: List<Destination>,
     darkTheme: Boolean,
     onSelect: (Destination) -> Unit,
     onToggleTheme: () -> Unit,
@@ -60,7 +61,7 @@ internal fun NavigationPanel(
                 .weight(1f)
                 .verticalScroll(rememberScrollState()),
         ) {
-            Destination.entries.forEach { destination ->
+            destinations.forEach { destination ->
                 NavigationDestination(
                     title = destination.title,
                     icon = destination.icon,

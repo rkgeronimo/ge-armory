@@ -6,17 +6,22 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -54,8 +59,9 @@ internal fun LoginScreen(
     busy: Boolean,
     onLogin: (String, String) -> Unit,
 ) {
-    val portrait =
-        LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
+    val configuration = LocalConfiguration.current
+    val portrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+    val phone = configuration.smallestScreenWidthDp < 600
 
     Box(
         modifier = Modifier
@@ -64,27 +70,64 @@ internal fun LoginScreen(
     ) {
         BubbleField(Modifier.fillMaxSize())
         if (portrait) {
-            Column(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
                     .safeDrawingPadding()
-                    .padding(horizontal = 28.dp, vertical = 36.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
+                    .imePadding(),
             ) {
-                LoginBranding(
-                    centered = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Spacer(Modifier.height(36.dp))
-                LoginCard(
-                    error = error,
-                    busy = busy,
-                    onLogin = onLogin,
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .widthIn(max = 440.dp),
-                )
+                        .heightIn(min = maxHeight)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 28.dp, vertical = 36.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    LoginBranding(
+                        centered = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(36.dp))
+                    LoginCard(
+                        error = error,
+                        busy = busy,
+                        onLogin = onLogin,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .widthIn(max = 440.dp),
+                    )
+                }
+            }
+        } else if (phone) {
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .safeDrawingPadding(),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = maxHeight)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    LoginBranding(
+                        centered = true,
+                        compact = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(16.dp))
+                    LoginCard(
+                        error = error,
+                        busy = busy,
+                        onLogin = onLogin,
+                        compact = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         } else {
             Row(
@@ -113,6 +156,7 @@ internal fun LoginScreen(
 private fun LoginBranding(
     modifier: Modifier = Modifier,
     centered: Boolean = false,
+    compact: Boolean = false,
 ) {
     Column(
         modifier = modifier,
@@ -123,25 +167,27 @@ private fun LoginBranding(
             contentDescription = "Ronilački klub Geronimo",
             modifier = Modifier.size(120.dp),
         )
-        Spacer(Modifier.height(22.dp))
+        Spacer(Modifier.height(if (compact) 8.dp else 22.dp))
         Text(
             text = "GE Armory",
             color = MaterialTheme.colorScheme.onPrimaryContainer,
-            fontSize = 34.sp,
+            fontSize = if (compact) 26.sp else 34.sp,
             fontWeight = FontWeight.Bold,
             textAlign = if (centered) TextAlign.Center else TextAlign.Start,
         )
-        Spacer(Modifier.height(10.dp))
-        Text(
-            text = "Jednostavno upravljanje opremom ronilačkog kluba.",
-            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
-            fontSize = 17.sp,
-            lineHeight = 25.sp,
-            textAlign = if (centered) TextAlign.Center else TextAlign.Start,
-            modifier = Modifier
-                .widthIn(max = 360.dp)
-                .then(if (centered) Modifier.fillMaxWidth() else Modifier),
-        )
+        if (!compact) {
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = "Jednostavno upravljanje opremom ronilačkog kluba.",
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
+                fontSize = 17.sp,
+                lineHeight = 25.sp,
+                textAlign = if (centered) TextAlign.Center else TextAlign.Start,
+                modifier = Modifier
+                    .widthIn(max = 360.dp)
+                    .then(if (centered) Modifier.fillMaxWidth() else Modifier),
+            )
+        }
     }
 }
 
@@ -158,6 +204,7 @@ private fun LoginCard(
     error: String?,
     busy: Boolean,
     onLogin: (String, String) -> Unit,
+    compact: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     var username by remember { mutableStateOf(if (BuildConfig.DEBUG) "demo" else "") }
@@ -169,18 +216,17 @@ private fun LoginCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
     ) {
-        Column(modifier = Modifier.padding(36.dp)) {
+        Column(modifier = Modifier.padding(if (compact) 16.dp else 36.dp)) {
             Text(
                 text = "Prijava",
-                style = MaterialTheme.typography.headlineMedium,
+                style = if (compact) {
+                    MaterialTheme.typography.titleLarge
+                } else {
+                    MaterialTheme.typography.headlineMedium
+                },
                 fontWeight = FontWeight.Bold,
             )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Nastavite u sustav za upravljanje opremom.",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(if (compact) 12.dp else 28.dp))
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
@@ -206,13 +252,13 @@ private fun LoginCard(
                 Spacer(Modifier.height(12.dp))
                 Text(text = error, color = MaterialTheme.colorScheme.error)
             }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(if (compact) 12.dp else 20.dp))
             Button(
                 onClick = { if (!busy) onLogin(username, password) },
                 enabled = busy || (username.isNotBlank() && password.isNotBlank()),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(if (compact) 48.dp else 56.dp),
             ) {
                 if (busy) {
                     CircularProgressIndicator(

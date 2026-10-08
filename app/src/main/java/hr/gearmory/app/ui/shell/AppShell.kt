@@ -28,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -55,8 +56,13 @@ internal fun AppShell(
 ) {
     var selected by rememberSaveable { mutableStateOf(Destination.Home) }
     var openReservationId by rememberSaveable { mutableStateOf<Long?>(null) }
-    val isPortrait =
-        LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT
+    val configuration = LocalConfiguration.current
+    val phone = configuration.smallestScreenWidthDp < 600
+    val isPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+    val destinations = if (phone) phoneDestinations else Destination.entries
+    LaunchedEffect(phone) {
+        if (selected !in destinations) selected = Destination.Home
+    }
     val select: (Destination) -> Unit = { destination ->
         openReservationId = null
         selected = destination
@@ -71,9 +77,10 @@ internal fun AppShell(
             .fillMaxSize()
             .safeDrawingPadding(),
     ) {
-        if (isPortrait) {
-            PortraitShell(
+        if (isPortrait || phone) {
+            DrawerShell(
                 selected = selected,
+                destinations = destinations,
                 darkTheme = darkTheme,
                 onSelect = select,
                 onToggleTheme = onToggleTheme,
@@ -86,6 +93,7 @@ internal fun AppShell(
                 Surface(color = MaterialTheme.colorScheme.surface) {
                     NavigationPanel(
                         selected = selected,
+                        destinations = destinations,
                         darkTheme = darkTheme,
                         onSelect = select,
                         onToggleTheme = onToggleTheme,
@@ -111,8 +119,9 @@ internal fun AppShell(
 }
 
 @Composable
-private fun PortraitShell(
+private fun DrawerShell(
     selected: Destination,
+    destinations: List<Destination>,
     darkTheme: Boolean,
     onSelect: (Destination) -> Unit,
     onToggleTheme: () -> Unit,
@@ -133,6 +142,7 @@ private fun PortraitShell(
             ) {
                 NavigationPanel(
                     selected = selected,
+                    destinations = destinations,
                     darkTheme = darkTheme,
                     onSelect = { destination ->
                         onSelect(destination)
@@ -206,3 +216,9 @@ private fun ShellContent(
         }
     }
 }
+
+private val phoneDestinations = listOf(
+    Destination.Home,
+    Destination.Issuance,
+    Destination.Returns,
+)
