@@ -9,7 +9,7 @@ Jedan fizički predmet opreme, identificiran šifrom.
 _Avoid_: artikal, stavka, item
 
 **Šifra**:
-Identifikator jednog komada. Nosi veličinu i broj tog komada. X zamjenjuje znamenku koja se s komada ne može pročitati. Čizmice počinju s B. Kompenzator počinje s J i nema veličinu u šifri. Rukavice počinju s G.
+Identifikator jednog komada. Nosi veličinu i broj tog komada. X zamjenjuje znamenku koja se s komada ne može pročitati. Čizmice počinju s B. Kompenzator počinje s J, slijedi veličina pa broj. Primjer: `JM08`. Rukavice počinju s G.
 _Avoid_: kod, ID
 
 **Broj komada**:

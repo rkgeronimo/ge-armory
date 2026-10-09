@@ -120,10 +120,17 @@ internal fun pieceCodeOk(type: String, code: String): Boolean {
             val size = sizes.firstOrNull { body.startsWith(it) } ?: return false
             numberOk(body.removePrefix(size), limit)
         }
-        "Čizmice", "Kompenzator" -> {
+        "Čizmice" -> {
             val letter = codeLetter(type)
             if (!code.startsWith(letter)) return false
             numberOk(code.removePrefix(letter), limit)
+        }
+        "Kompenzator" -> {
+            val letter = codeLetter(type)
+            if (!code.startsWith(letter)) return false
+            val body = code.removePrefix(letter)
+            val size = sizes.firstOrNull { body.startsWith(it) } ?: return false
+            numberOk(body.removePrefix(size), limit)
         }
         "Regulator" -> {
             val prefix = regulatorTypes.firstOrNull { code.startsWith(it.second) }?.second ?: return false
@@ -131,6 +138,12 @@ internal fun pieceCodeOk(type: String, code: String): Boolean {
         }
         else -> numberOk(code, limit)
     }
+}
+
+// Stari zapis kompenzatora: J + broj, uz veličinu u zasebnom stupcu (prije CJV formata).
+private fun legacyCompensatorOk(code: String): Boolean {
+    val body = code.removePrefix(codeLetter("Kompenzator"))
+    return body != code && numberOk(body, typedNumberLimit("Kompenzator"))
 }
 
 internal fun normalizeQuantity(raw: String): String? {
@@ -301,7 +314,7 @@ private fun pieceEntry(
     enteredOn: String,
     index: Int,
 ): InventoryEntry? {
-    if (!pieceCodeOk(type, code)) return null
+    if (!pieceCodeOk(type, code) && !(type == "Kompenzator" && legacyCompensatorOk(code))) return null
     if (condition !in pieceConditions) return null
     if (quantity.isNotEmpty() || note.isNotEmpty()) return null
     if (type == "Odijelo") {

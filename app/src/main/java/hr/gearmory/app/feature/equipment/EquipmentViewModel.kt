@@ -97,6 +97,7 @@ internal fun pieceSize(type: String, code: String): String {
     val body = if (letter.isEmpty() || code.startsWith(letter)) code.removePrefix(letter) else return ""
     val prefixes = when (type) {
         "Peraje" -> listOf("XL", "S", "R")
+        "Kompenzator" -> listOf("XXL", "XL", "XS", "S", "M", "L")
         "Rukavice" -> listOf("XL", "S", "M", "L")
         "Odijelo", "Čizmice" -> return digitSize(body)
         else -> return ""

@@ -79,7 +79,6 @@ internal fun InventoryScreen(viewModel: InventoryViewModel = viewModel()) {
     val brands = if (type == "Regulator") regulatorTypes else emptyList()
     val inCode = when (type) {
         "Regulator" -> regulator
-        "Kompenzator" -> ""
         else -> size
     }
     val code = codeLetter(type) + inCode + typed

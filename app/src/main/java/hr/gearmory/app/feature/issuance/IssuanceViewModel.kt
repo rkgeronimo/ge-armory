@@ -23,6 +23,7 @@ internal val loanApiKey = mapOf(
     "Čizmice" to "boots",
     "Peraje" to "fins",
     "Kompenzator" to "bcd",
+    "Rukavice" to "gloves",
     "Regulator" to "regulator",
     LoanMaskaDisalica to "mask",
     LoanOlovo to "lead",
@@ -38,6 +39,7 @@ internal val loanEquipmentTypes = listOf(
     "Čizmice",
     "Peraje",
     "Kompenzator",
+    "Rukavice",
     "Regulator",
     LoanMaskaDisalica,
     LoanOlovo,
@@ -45,7 +47,8 @@ internal val loanEquipmentTypes = listOf(
 
 internal fun loanField(type: String, size: String, number: String): String = when (type) {
     "Čizmice" -> "B$number"
-    "Kompenzator" -> "J$number"
+    "Kompenzator" -> "J$size$number"
+    "Rukavice" -> "G$size$number"
     "Peraje", "Regulator" -> size + number
     LoanMaskaDisalica -> "MD$number"
     else -> number
@@ -53,15 +56,14 @@ internal fun loanField(type: String, size: String, number: String): String = whe
 
 internal fun loanShown(type: String, size: String, number: String): String {
     if (type == LoanOlovo) return number
-    if (number.isEmpty()) return ""
-    val code = loanField(type, size, number)
-    return if (type == "Kompenzator" && size.isNotEmpty()) "$code $size" else code
+    if (!loanReady(type, size, number)) return ""
+    return loanField(type, size, number)
 }
 
 internal fun loanReady(type: String, size: String, number: String): Boolean {
     if (number.isBlank()) return false
     return when (type) {
-        "Peraje", "Kompenzator" -> size.isNotBlank()
+        "Peraje", "Kompenzator", "Rukavice" -> size.isNotBlank()
         "Regulator" -> regulatorTypes.any { it.second == size }
         else -> true
     }

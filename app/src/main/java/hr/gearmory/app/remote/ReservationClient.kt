@@ -77,6 +77,7 @@ internal data class Reservation(
 internal class ReservationException(
     val http: Int,
     val code: String?,
+    val missing: List<String> = emptyList(),
 ) : Exception(code ?: http.toString())
 
 internal fun reservationNotice(error: Throwable): String = when (error) {
@@ -85,11 +86,31 @@ internal fun reservationNotice(error: Throwable): String = when (error) {
         "rkg_invalid_return" -> "Oznaka nije valjana."
         "rkg_not_found" -> "Zahtjev nije pronađen."
         "rkg_invalid" -> "Korisnik nije valjan."
-        "rkg_unavailable" -> "Zahtjev nije dostupan."
+        "rkg_unavailable" -> unavailableNotice(error)
         else -> "Stranica nije odgovorila."
     }
     else -> "Stranica nije dostupna."
 }
+
+private fun unavailableNotice(error: ReservationException): String {
+    val labels = error.missing.mapNotNull { key -> pieceLabels[key] }
+    return if (labels.isEmpty()) {
+        "Zahtjev nije dostupan."
+    } else {
+        "Oprema nije dostupna: ${labels.joinToString(", ")}."
+    }
+}
+
+private val pieceLabels = mapOf(
+    "mask" to "Maska i disalica",
+    "regulator" to "Regulator",
+    "suit" to "Odijelo",
+    "boots" to "Čizmice",
+    "gloves" to "Rukavice",
+    "fins" to "Peraje",
+    "bcd" to "Kompenzator",
+    "lead" to "Olovo",
+)
 
 internal fun Reservation.listLabel(): String {
     val trip = excursion?.takeIf { it.isNotBlank() }
@@ -99,7 +120,7 @@ internal fun Reservation.listLabel(): String {
 internal fun Reservation.openPieces(): List<Pair<String, ReservedPiece>> =
     equipmentKeys.mapNotNull { key ->
         val piece = equipment[key] ?: return@mapNotNull null
-        if (!piece.needed || piece.code.isNullOrBlank()) return@mapNotNull null
+        if (piece.code.isNullOrBlank()) return@mapNotNull null
         if (piece.returned == 0 || piece.returned == 3) return@mapNotNull null
         key to piece
     }
@@ -270,7 +291,7 @@ internal object ReservationClient {
                 throw ReservationException(http, null)
             }
             if (http !in 200..299) {
-                throw ReservationException(http, errorCode(text))
+                throw ReservationException(http, errorCode(text), errorEquipment(text))
             }
             return text
         } finally {
@@ -282,6 +303,13 @@ internal object ReservationClient {
         JSONObject(text).optNullableString("code")
     } catch (_: Exception) {
         null
+    }
+
+    private fun errorEquipment(text: String): List<String> = try {
+        val array = JSONObject(text).optJSONObject("data")?.optJSONArray("equipment") ?: JSONArray()
+        List(array.length()) { array.getString(it) }
+    } catch (_: Exception) {
+        emptyList()
     }
 
     private fun parseReservation(json: JSONObject): Reservation {
